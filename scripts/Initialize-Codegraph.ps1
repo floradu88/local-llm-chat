@@ -1,13 +1,21 @@
 <#
 .SYNOPSIS
-  Index a project with Codegraph (local graph). Installs nothing if CLI missing — prints help.
+  Index a project with Codegraph (local graph). Installs via Install-Codegraph.ps1 if CLI missing.
 
 .PARAMETER ProjectPath
   Project to index (default: current directory / toolkit repo when run from scripts).
+
+.PARAMETER InstallIfMissing
+  If codegraph is not on PATH, run Install-Codegraph.ps1 for this project (default: true).
+
+.PARAMETER ForceInit
+  Rebuild graph even when .codegraph exists.
 #>
 [CmdletBinding()]
 param(
-  [string] $ProjectPath = ""
+  [string] $ProjectPath = "",
+  [bool] $InstallIfMissing = $true,
+  [switch] $ForceInit
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,15 +27,27 @@ if (-not (Test-Path -LiteralPath $ProjectPath)) {
   throw "ProjectPath not found: $ProjectPath"
 }
 $ProjectPath = (Resolve-Path -LiteralPath $ProjectPath).Path
+$graphDir = Join-Path $ProjectPath ".codegraph"
 
 $cg = Get-Command codegraph -ErrorAction SilentlyContinue
 if (-not $cg) {
+  if ($InstallIfMissing) {
+    Write-Host "codegraph not on PATH — running Install-Codegraph.ps1 (fnm → npm → agent install → init)..."
+    $args = @{ ProjectPath = $ProjectPath }
+    if ($ForceInit) { $args["ForceInit"] = $true }
+    & (Join-Path $PSScriptRoot "Install-Codegraph.ps1") @args
+    exit $LASTEXITCODE
+  }
   Write-Host "codegraph not on PATH."
-  Write-Host "Install your Codegraph CLI, then re-run this script."
-  Write-Host "Typical after install:"
-  Write-Host "  cd `"$ProjectPath`""
-  Write-Host "  codegraph init"
+  Write-Host "Install with:"
+  Write-Host "  .\scripts\Install-Codegraph.ps1 -ProjectPath `"$ProjectPath`""
   exit 1
+}
+
+if ((Test-Path -LiteralPath $graphDir) -and -not $ForceInit) {
+  Write-Host "Already indexed: $graphDir"
+  Write-Host "Pass -ForceInit to rebuild, or: codegraph init"
+  exit 0
 }
 
 Push-Location $ProjectPath

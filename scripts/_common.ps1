@@ -193,16 +193,248 @@ function Get-CursorInstallInfo {
     }
   }
 
+  $userData = Join-Path $env:APPDATA "Cursor"
+  $settings = Join-Path $userData "User\settings.json"
+  $stateDb = Join-Path $userData "User\globalStorage\state.vscdb"
+  $nodeHelper = $null
+  if ($exe) {
+    $maybeNode = Join-Path (Split-Path -Parent $exe) "resources\app\resources\helpers\node.exe"
+    if (Test-Path -LiteralPath $maybeNode) {
+      $nodeHelper = (Resolve-Path -LiteralPath $maybeNode).Path
+    }
+  }
+
   return [pscustomobject]@{
-    Installed = [bool]($exe -or $cmd)
-    ExePath   = $exe
-    CmdPath   = $cmd
-    Scope     = $scope
+    Installed      = [bool]($exe -or $cmd)
+    ExePath        = $exe
+    CmdPath        = $cmd
+    Scope          = $scope
+    UserDataPath   = $userData
+    SettingsPath   = $settings
+    StateDbPath    = $stateDb
+    NodeHelperPath = $nodeHelper
   }
 }
 
 function Test-CursorInstalled {
   return [bool]((Get-CursorInstallInfo).Installed)
+}
+
+function Test-CursorProcessRunning {
+  return [bool](Get-Process -Name "Cursor" -ErrorAction SilentlyContinue)
+}
+
+function Get-VSCodeExeCandidates {
+  @(
+    (Join-Path $env:LOCALAPPDATA "Programs\Microsoft VS Code\Code.exe"),
+    (Join-Path $env:LOCALAPPDATA "Programs\Microsoft VS Code Insiders\Code - Insiders.exe"),
+    (Join-Path ${env:ProgramFiles} "Microsoft VS Code\Code.exe"),
+    (Join-Path ${env:ProgramFiles} "Microsoft VS Code Insiders\Code - Insiders.exe"),
+    (Join-Path ${env:ProgramFiles(x86)} "Microsoft VS Code\Code.exe")
+  ) | Where-Object { $_ }
+}
+
+function Get-VSCodeInstallInfo {
+  <#
+  .SYNOPSIS
+    Locate VS Code Code.exe (prefer per-user install under LocalAppData).
+  #>
+  $exe = $null
+  $scope = "None"
+  $insiders = $false
+  foreach ($candidate in @(Get-VSCodeExeCandidates)) {
+    if (Test-Path -LiteralPath $candidate) {
+      $exe = (Resolve-Path -LiteralPath $candidate).Path
+      $insiders = ($exe -match "Insiders")
+      if ($exe -like (Join-Path $env:LOCALAPPDATA "*")) {
+        $scope = "User"
+      } else {
+        $scope = "Machine"
+      }
+      break
+    }
+  }
+
+  $cmd = $null
+  $c = Get-Command code -ErrorAction SilentlyContinue
+  if ($c -and $c.Source) {
+    $cmd = $c.Source
+  }
+  if (-not $cmd -and $exe) {
+    $binName = if ($insiders) { "code-insiders.cmd" } else { "code.cmd" }
+    $maybeCmd = Join-Path (Split-Path -Parent $exe) "bin\$binName"
+    if (Test-Path -LiteralPath $maybeCmd) {
+      $cmd = (Resolve-Path -LiteralPath $maybeCmd).Path
+    }
+  }
+  if (-not $exe -and $cmd) {
+    # code.cmd lives under ...\Microsoft VS Code\bin
+    $root = Split-Path -Parent (Split-Path -Parent $cmd)
+    $maybeExe = Join-Path $root "Code.exe"
+    if (-not (Test-Path -LiteralPath $maybeExe)) {
+      $maybeExe = Join-Path $root "Code - Insiders.exe"
+    }
+    if (Test-Path -LiteralPath $maybeExe) {
+      $exe = (Resolve-Path -LiteralPath $maybeExe).Path
+      $insiders = ($exe -match "Insiders")
+      if ($exe -like (Join-Path $env:LOCALAPPDATA "*")) { $scope = "User" } else { $scope = "Machine" }
+    }
+  }
+
+  $userData = if ($insiders) {
+    Join-Path $env:APPDATA "Code - Insiders"
+  } else {
+    Join-Path $env:APPDATA "Code"
+  }
+
+  $continueDir = Join-Path $HOME ".continue"
+  $continueConfig = Join-Path $continueDir "config.json"
+
+  return [pscustomobject]@{
+    Installed       = [bool]($exe -or $cmd)
+    ExePath         = $exe
+    CmdPath         = $cmd
+    Scope           = $scope
+    Insiders        = $insiders
+    UserDataPath    = $userData
+    SettingsPath    = (Join-Path $userData "User\settings.json")
+    ContinueDir     = $continueDir
+    ContinueConfig  = $continueConfig
+  }
+}
+
+function Test-VSCodeInstalled {
+  return [bool]((Get-VSCodeInstallInfo).Installed)
+}
+
+function Get-ContinueOllamaConfigStatus {
+  <#
+  .SYNOPSIS
+    Check ~/.continue/config.json for Ollama (or Headroom) wiring.
+  #>
+  $info = Get-VSCodeInstallInfo
+  $path = $info.ContinueConfig
+  if (-not (Test-Path -LiteralPath $path)) {
+    return [pscustomobject]@{
+      Ok          = $true
+      Configured  = $false
+      Path        = $path
+      ApiBase     = $null
+      Models      = @()
+      Message     = "Continue config missing"
+      InstallInfo = $info
+    }
+  }
+
+  try {
+    $cfg = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+  } catch {
+    return [pscustomobject]@{
+      Ok          = $false
+      Configured  = $false
+      Path        = $path
+      ApiBase     = $null
+      Models      = @()
+      Message     = "Continue config JSON invalid: $_"
+      InstallInfo = $info
+    }
+  }
+
+  $models = @()
+  $apiBase = $null
+  foreach ($m in @($cfg.models)) {
+    $provider = [string]$m.provider
+    $base = [string]$m.apiBase
+    if ($provider -match "^(ollama|openai)$" -and $base -match "11434|8787|localhost|127\.0\.0\.1") {
+      $models += [string]$m.model
+      if (-not $apiBase) { $apiBase = $base }
+    }
+  }
+
+  $configured = $models.Count -gt 0
+  return [pscustomobject]@{
+    Ok          = $true
+    Configured  = $configured
+    Path        = $path
+    ApiBase     = $apiBase
+    Models      = $models
+    Message     = if ($configured) { "Continue wired to local models" } else { "Continue config has no local Ollama/OpenAI models" }
+    InstallInfo = $info
+  }
+}
+
+function Get-CursorOllamaConfigStatus {
+  <#
+  .SYNOPSIS
+    Read Cursor openAIBaseUrl / useOpenAIKey / enabled models from state.vscdb.
+  #>
+  $info = Get-CursorInstallInfo
+  if (-not $info.Installed) {
+    return [pscustomobject]@{
+      Ok            = $false
+      Installed     = $false
+      Configured    = $false
+      Message       = "Cursor not installed"
+      InstallInfo   = $info
+    }
+  }
+  if (-not (Test-Path -LiteralPath $info.StateDbPath)) {
+    return [pscustomobject]@{
+      Ok            = $false
+      Installed     = $true
+      Configured    = $false
+      Message       = "Cursor user data / state.vscdb missing (launch Cursor once, then re-run)"
+      InstallInfo   = $info
+    }
+  }
+  if (-not $info.NodeHelperPath) {
+    return [pscustomobject]@{
+      Ok            = $false
+      Installed     = $true
+      Configured    = $false
+      Message       = "Cursor bundled node.exe not found; cannot read state.vscdb"
+      InstallInfo   = $info
+    }
+  }
+
+  $helper = Join-Path $PSScriptRoot "_Set-CursorOllamaState.cjs"
+  if (-not (Test-Path -LiteralPath $helper)) {
+    throw "Missing helper: $helper"
+  }
+
+  $prevEa = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  try {
+    $raw = & $info.NodeHelperPath --no-warnings $helper status --db $info.StateDbPath 2>&1
+    $exit = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $prevEa
+  }
+  $text = (($raw | ForEach-Object { "$_" }) -join "`n").Trim()
+  if ($exit -ne 0) {
+    return [pscustomobject]@{
+      Ok          = $false
+      Installed   = $true
+      Configured  = $false
+      Message     = "Failed to read Cursor state: $text"
+      InstallInfo = $info
+      Raw         = $text
+    }
+  }
+
+  $json = $text | ConvertFrom-Json
+  return [pscustomobject]@{
+    Ok                   = [bool]$json.ok
+    Installed            = $true
+    Configured           = [bool]$json.configuredForOllama
+    OpenAIBaseUrl        = $json.openAIBaseUrl
+    UseOpenAIKey         = [bool]$json.useOpenAIKey
+    ApiKeyPresent        = [bool]$json.apiKeyPresent
+    ModelOverrideEnabled = @($json.modelOverrideEnabled)
+    Message              = if ($json.configuredForOllama) { "Cursor wired to local OpenAI-compatible endpoint" } else { "Cursor not yet configured for Ollama" }
+    InstallInfo          = $info
+    Raw                  = $json
+  }
 }
 
 function Get-PythonUserScriptsPath {

@@ -65,19 +65,32 @@ if ($hasCoding) {
   Write-Check "E/F" "FAIL" "no models - run Pull-CodingModels.ps1 or Setup-Machine.ps1"
 }
 
-# H Continue
-$continueCfg = Join-Path $HOME ".continue\config.json"
-if (Test-Path $continueCfg) {
-  Write-Check "H" "OK" "Continue config present: $continueCfg"
+# H VS Code + Continue
+$vsInfo = Get-VSCodeInstallInfo
+if ($vsInfo.Installed) {
+  Write-Check "H" "OK" ("VS Code installed ({0}): {1}" -f $vsInfo.Scope, $(if ($vsInfo.ExePath) { $vsInfo.ExePath } else { $vsInfo.CmdPath }))
 } else {
-  Write-Check "H" "WARN" "Continue config missing - Install-ContinueConfig.ps1"
+  Write-Check "H" "WARN" "VS Code missing - install from code.visualstudio.com (User Installer)"
+}
+$cont = Get-ContinueOllamaConfigStatus
+if ($cont.Configured) {
+  Write-Check "H-cfg" "OK" ("Continue → {0} models: {1}" -f $cont.ApiBase, ($cont.Models -join ", "))
+} else {
+  Write-Check "H-cfg" "WARN" "run .\scripts\Install-ContinueConfig.ps1 (or Install-VSCodeConfig.ps1)"
 }
 
 # I Cursor
 $cursorInfo = Get-CursorInstallInfo
 if ($cursorInfo.Installed) {
   Write-Check "I" "OK" ("Cursor installed ({0}): {1}" -f $cursorInfo.Scope, $(if ($cursorInfo.ExePath) { $cursorInfo.ExePath } else { $cursorInfo.CmdPath }))
-  Write-Check "I-cfg" "WARN" "still set Models base URL http://localhost:11434/v1 manually"
+  $cfg = Get-CursorOllamaConfigStatus
+  if ($cfg.Configured) {
+    Write-Check "I-cfg" "OK" ("Models → {0} (key={1})" -f $cfg.OpenAIBaseUrl, $(if ($cfg.ApiKeyPresent) { "set" } else { "missing" }))
+  } elseif ($cfg.Ok -eq $false -and $cfg.Message -match "state.vscdb missing|Launch Cursor") {
+    Write-Check "I-cfg" "WARN" $cfg.Message
+  } else {
+    Write-Check "I-cfg" "WARN" "run .\scripts\Install-CursorConfig.ps1 (quit Cursor first)"
+  }
 } else {
   Write-Check "I" "FAIL" "Cursor missing - run .\scripts\Install-Cursor.ps1"
 }
@@ -90,10 +103,16 @@ if (Get-Command headroom -ErrorAction SilentlyContinue) {
 }
 
 # K Codegraph
+$cgCmd = Get-Command codegraph -ErrorAction SilentlyContinue
+if ($cgCmd) {
+  Write-Check "K-cli" "OK" ("codegraph CLI: {0}" -f $cgCmd.Source)
+} else {
+  Write-Check "K-cli" "WARN" "codegraph CLI missing - .\scripts\Install-Codegraph.ps1"
+}
 if (Test-Path (Join-Path $RepoRoot ".codegraph")) {
   Write-Check "K" "OK" ".codegraph exists in this repo"
 } else {
-  Write-Check "K" "WARN" "no .codegraph here (optional) - codegraph init"
+  Write-Check "K" "WARN" "no .codegraph here - .\scripts\Install-Codegraph.ps1 -ProjectPath <repo>"
 }
 
 # GPU (non-admin quick)

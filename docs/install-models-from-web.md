@@ -160,4 +160,11 @@ See README **Copy-paste: three example coding models**.
 
 ## Next
 
-Wire VS Code / Cursor / Codegraph / Headroom: [integrations.md](integrations.md).
+Wire editors (finds installs + writes config):
+
+```powershell
+.\scripts\Install-ContinueConfig.ps1   # VS Code + Continue
+.\scripts\Install-CursorConfig.ps1     # quit Cursor first
+```
+
+Also: Codegraph / Headroom — [integrations.md](integrations.md).

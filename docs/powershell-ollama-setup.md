@@ -141,7 +141,8 @@ Settings → Apps → Ollama → Uninstall. If you set `OLLAMA_MODELS`, remove t
 ## Next
 
 - Verify: `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1`
-- Cursor: `.\scripts\Install-Cursor.ps1`
+- Cursor: `.\scripts\Install-Cursor.ps1` then quit Cursor and `.\scripts\Install-CursorConfig.ps1`
+- VS Code: `.\scripts\Install-ContinueConfig.ps1` (alias `Install-VSCodeConfig.ps1`)
 - GPU: `.\scripts\Test-GpuSupport.ps1` / `.\scripts\Install-GpuDrivers.ps1`
 - Import from Hugging Face / other sources: [install-models-from-web.md](install-models-from-web.md)
 - Trusted hosts: [trusted-sources.md](trusted-sources.md)

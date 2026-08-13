@@ -36,14 +36,20 @@ ollama ps
 
 ### Continue (VS Code)
 
-`config/continue.config.example.json` already lists the three example models. After `Install-ContinueConfig.ps1`, pick the active model in the Continue UI.
+`Install-ContinueConfig.ps1` (alias `Install-VSCodeConfig.ps1`) finds VS Code, installs Continue, and writes `~\.continue\config.json` from `ollama list` (or the three README examples). Then pick the active model in the Continue UI.
 
 - Chat / agent: `qwen2.5-coder:7b` or `deepseek-coder-v2:16b` or `codellama:13b`
 - Tab autocomplete: keep a **small** tag (e.g. `qwen2.5-coder:3b`) so it stays fast while chat uses a larger model
 
 ### Cursor
 
-Add each tag as a selectable model (same base URL `http://localhost:11434/v1`, key `ollama`). Switch model in the chat model picker — only one generates at a time unless you open multiple chats/agents.
+```powershell
+.\scripts\Install-CursorConfig.ps1
+# or with explicit tags:
+.\scripts\Install-CursorConfig.ps1 -Models qwen2.5-coder:7b,deepseek-coder-v2:16b,codellama:13b -SetAsDefault
+```
+
+That sets base URL `http://localhost:11434/v1`, key `ollama`, and enables the tags. Switch model in the chat model picker — only one generates at a time unless you open multiple chats/agents.
 
 ---
 
@@ -145,7 +151,13 @@ Keep `codegraph` MCP enabled; ask the agent to use Codegraph tools first, then g
 Headroom compresses context; it does **not** replace a second model. Pattern:
 
 1. `.\scripts\Start-HeadroomOllama.ps1`  
-2. Cursor/Continue → `http://127.0.0.1:8787/v1`  
+2. Point editors at Headroom:
+
+```powershell
+.\scripts\Install-CursorConfig.ps1 -Headroom
+.\scripts\Install-ContinueConfig.ps1 -Headroom -Force
+# or Models/Continue UI → http://127.0.0.1:8787/v1  key ollama
+```
 3. Still pick **one** generation model per request; switch tags as needed  
 
 ---
@@ -192,7 +204,9 @@ Run several of these in `Start-Job` / `ForEach-Object -Parallel` (PowerShell 7+)
 
 - Example pulls: README (three models)
 - Continue multi-model config: `config/continue.config.example.json`
-- Cursor install + Models checklist: `Install-Cursor.ps1`, `config/cursor-openai-local.example.md`
+- Cursor install + Models config: `Install-Cursor.ps1`, `Install-CursorConfig.ps1`, `config/cursor-openai-local.example.md`
+- VS Code Continue config: `Install-ContinueConfig.ps1` / `Install-VSCodeConfig.ps1`
+- Editor integrations overview: [integrations.md](integrations.md)
 - Scripts: `Invoke-ParallelModels.ps1`, `Invoke-ModelWorkflow.ps1`
 - Features: [FEATURES.md](../FEATURES.md)
 - Code map/understand prompts: [code-understanding-prompts.md](code-understanding-prompts.md)

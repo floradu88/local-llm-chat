@@ -64,9 +64,11 @@ driverquery /v | Select-String "NVIDIA|nvlddmkm|BasicDisplay|Indirect"
 ## Other toolkit commands (usually stay non-admin)
 
 ```powershell
-# Install / pull / verify — no admin
+# Install / pull / verify / editor wire — no admin
 .\scripts\Setup-Machine.ps1 -Tier Auto
 .\scripts\Install-Cursor.ps1
+.\scripts\Install-CursorConfig.ps1      # quit Cursor first
+.\scripts\Install-ContinueConfig.ps1    # finds VS Code / Continue
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Test-LocalSetup.ps1
 
@@ -85,4 +87,5 @@ driverquery /v | Select-String "NVIDIA|nvlddmkm|BasicDisplay|Indirect"
 - Prefer **User** env vars (`Set-OllamaEnv.ps1 -Persistent`) over Machine-level changes.
 - If UAC is denied, the non-admin report is still valid for Ollama CPU vs GPU verdict.
 - VMs need a host-exposed NVIDIA device before guest driver install helps — see `Install-GpuDrivers.ps1`.
-- Cursor install is per-user and does not need elevation (`Install-Cursor.ps1`).
+- Cursor install and Models config are per-user and do not need elevation (`Install-Cursor.ps1`, `Install-CursorConfig.ps1`).
+- VS Code Continue config is per-user (`Install-ContinueConfig.ps1` / `Install-VSCodeConfig.ps1`).

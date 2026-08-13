@@ -20,7 +20,7 @@ cd <repo-root>
 
 | Path | Role |
 |------|------|
-| `scripts/` | PowerShell: env, Ollama/Cursor/GPU install, pull/download/import, Headroom, full machine setup |
+| `scripts/` | PowerShell: env, Ollama/Cursor/VS Code Continue/Codegraph/GPU install+config, pull/download/import, Headroom, full machine setup |
 | `docs/` | Human + agent docs (setup, trusted sources, web import, integrations) |
 | `config/` | Modelfile template, Continue example, Cursor checklist |
 | `models/gguf/` | Downloaded GGUF (gitignored) |
@@ -32,13 +32,16 @@ cd <repo-root>
 2. `.\scripts\Install-Ollama.ps1`
 3. `.\scripts\Install-Cursor.ps1` (skips if already installed; per-user)
 4. `.\scripts\Pull-CodingModels.ps1 -Tier <8GB|16GB|32GB|Auto>` (skips tags already on disk; `-Force` to re-pull)
-5. `.\scripts\Test-LocalSetup.ps1`
-6. Wire editor: `.\scripts\Install-ContinueConfig.ps1` and/or Cursor Models UI per [docs/integrations.md](docs/integrations.md)
-7. Optional: `.\scripts\Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` (VM needs host GPU passthrough first)
-8. Optional: `.\scripts\Start-HeadroomOllama.ps1`
-9. Optional: `codegraph init` in projects that need the graph
+5. Wire **Cursor** → Ollama: quit Cursor if open, then `.\scripts\Install-CursorConfig.ps1` (finds install + writes Models into `state.vscdb`)
+6. Wire **VS Code** → Ollama: `.\scripts\Install-ContinueConfig.ps1` (alias `Install-VSCodeConfig.ps1` — finds Code.exe, installs Continue extension, writes `~\.continue\config.json`)
+7. `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1`
+8. Optional: `.\scripts\Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` (VM needs host GPU passthrough first)
+9. Optional: `.\scripts\Start-HeadroomOllama.ps1` then `Install-CursorConfig.ps1 -Headroom` and/or `Install-ContinueConfig.ps1 -Headroom -Force`
+10. Optional: `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (fnm → npm → `--no-permissions` then permissions → `codegraph init` if needed)
 
-One-shot: `.\scripts\Setup-Machine.ps1` (env + Ollama + Cursor check/install + pulls + verify). Use `-SkipCursor` / `-InstallGpuDrivers` as needed.
+One-shot: `.\scripts\Setup-Machine.ps1` (env + Ollama + Cursor install + pulls + **Cursor config** + **VS Code Continue config** + verify). Use `-SkipCursor` / `-SkipCursorConfig` / `-SkipContinueConfig` / `-InstallGpuDrivers` as needed.
+
+Editor details: [docs/integrations.md](docs/integrations.md), Cases H/I in README, `config/cursor-openai-local.example.md`.
 
 ## Trusted sources only
 
@@ -54,8 +57,9 @@ Do not fetch models from random Drive/Telegram/unsigned mirrors.
 ## When the user asks to “set up local models”
 
 - Run or guide `Setup-Machine.ps1` with an appropriate `-Tier` from their RAM.
-- Verify with `.\scripts\Test-LocalSetup.ps1` and `.\scripts\Show-SetupStatus.ps1`.
-- Ensure Cursor exists via `Install-Cursor.ps1`; Continue via `Install-ContinueConfig.ps1`.
+- Verify with `.\scripts\Test-LocalSetup.ps1` and `.\scripts\Show-SetupStatus.ps1` (Cases H/H-cfg and I/I-cfg should go green).
+- Cursor: `Install-Cursor.ps1` then quit Cursor and `Install-CursorConfig.ps1`.
+- VS Code: `Install-ContinueConfig.ps1` (or `Install-VSCodeConfig.ps1`) — finds Code.exe and wires Continue.
 - Point them at [docs/integrations.md](docs/integrations.md) and `config/cursor-openai-local.example.md`.
 - For Hugging Face GGUF: `Download-FromHuggingFace.ps1` then `Import-GGUF.ps1` (both skip if already present unless `-Force`).
 - For ModelScope/GitHub URL: `Download-FromUrl.ps1` then `Import-GGUF.ps1`.

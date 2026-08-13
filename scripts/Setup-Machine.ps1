@@ -4,7 +4,8 @@
 
 .DESCRIPTION
   Intended for humans and local agents following AGENTS.md / docs/agent-setup-playbook.md.
-  Does not configure VS Code/Cursor GUI settings (prints those steps).
+  Configures Cursor → Ollama via Install-CursorConfig.ps1 when Cursor is present (unless -SkipCursorConfig).
+  Configures VS Code Continue → Ollama via Install-ContinueConfig.ps1 (unless -SkipContinueConfig).
 
 .PARAMETER Tier
   RAM tier for Pull-CodingModels: 8GB | 16GB | 32GB | Auto
@@ -33,6 +34,18 @@
 
 .PARAMETER ForceCursor
   Re-run Cursor installer even if already present.
+
+.PARAMETER SkipCursorConfig
+  Do not write Cursor Models → Ollama settings (Install-CursorConfig.ps1).
+
+.PARAMETER ForceCursorConfig
+  Pass -Force to Install-CursorConfig.ps1 (replace non-Ollama base URL / write while Cursor running).
+
+.PARAMETER SkipContinueConfig
+  Do not write VS Code Continue → Ollama settings (Install-ContinueConfig.ps1).
+
+.PARAMETER ForceContinueConfig
+  Pass -Force to Install-ContinueConfig.ps1 (overwrite ~/.continue/config.json).
 #>
 [CmdletBinding()]
 param(
@@ -45,7 +58,11 @@ param(
   [switch] $InstallGpuDrivers,
   [switch] $ForceGpuDrivers,
   [switch] $SkipCursor,
-  [switch] $ForceCursor
+  [switch] $ForceCursor,
+  [switch] $SkipCursorConfig,
+  [switch] $ForceCursorConfig,
+  [switch] $SkipContinueConfig,
+  [switch] $ForceContinueConfig
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,23 +81,23 @@ Write-Host ""
 # 1) Env
 $envArgs = @{ Persistent = $true }
 if ($ModelsRoot) { $envArgs["ModelsRoot"] = $ModelsRoot }
-Write-Host "[1/6] Set-OllamaEnv.ps1"
+Write-Host "[1/8] Set-OllamaEnv.ps1"
 & (Join-Path $Scripts "Set-OllamaEnv.ps1") @envArgs
 
 # 2) Install
 if (-not $SkipInstall) {
   if (Test-OllamaCommand) {
     $ver = ollama --version
-    Write-Host "[2/6] Ollama already on PATH: $ver - skipping install."
+    Write-Host "[2/8] Ollama already on PATH: $ver - skipping install."
   }
   else {
-    Write-Host "[2/6] Install-Ollama.ps1"
+    Write-Host "[2/8] Install-Ollama.ps1"
     & (Join-Path $Scripts "Install-Ollama.ps1")
     Add-OllamaToSessionPath
   }
 }
 else {
-  Write-Host "[2/6] SkipInstall set - not installing."
+  Write-Host "[2/8] SkipInstall set - not installing."
   Add-OllamaToSessionPath
 }
 
@@ -91,49 +108,80 @@ if (-not (Test-OllamaCommand)) {
 # 3) Optional GPU drivers
 Write-Host ""
 if ($InstallGpuDrivers) {
-  Write-Host "[3/6] Install-GpuDrivers.ps1 -Install (optional, admin)"
+  Write-Host "[3/8] Install-GpuDrivers.ps1 -Install (optional, admin)"
   $gpuArgs = @{ Install = $true }
   if ($ForceGpuDrivers) { $gpuArgs["Force"] = $true }
   & (Join-Path $Scripts "Install-GpuDrivers.ps1") @gpuArgs
 } else {
-  Write-Host "[3/6] Skip GPU drivers (opt-in: -InstallGpuDrivers)"
+  Write-Host "[3/8] Skip GPU drivers (opt-in: -InstallGpuDrivers)"
   Write-Host "  Detect/VM guidance: .\scripts\Install-GpuDrivers.ps1"
 }
 
 # 4) Cursor (check + per-user install if missing)
 Write-Host ""
 if (-not $SkipCursor) {
-  Write-Host "[4/6] Install-Cursor.ps1 (check + current-user install if missing)"
+  Write-Host "[4/8] Install-Cursor.ps1 (check + current-user install if missing)"
   $cursorArgs = @{}
   if ($ForceCursor) { $cursorArgs["Force"] = $true }
   & (Join-Path $Scripts "Install-Cursor.ps1") @cursorArgs
 } else {
-  Write-Host "[4/6] SkipCursor set - not checking/installing Cursor"
+  Write-Host "[4/8] SkipCursor set - not checking/installing Cursor"
 }
 
 # 5) Pulls
 if (-not $SkipPull) {
-  Write-Host "[5/6] Pull-CodingModels.ps1 -Tier $Tier"
+  Write-Host "[5/8] Pull-CodingModels.ps1 -Tier $Tier"
   & (Join-Path $Scripts "Pull-CodingModels.ps1") -Tier $Tier -SkipSmoke
 }
 else {
-  Write-Host "[5/6] SkipPull set - not pulling models."
+  Write-Host "[5/8] SkipPull set - not pulling models."
   ollama list
 }
 
-# 6) Verify
-Write-Host "[6/6] Test-LocalSetup.ps1"
+# 6) Cursor → Ollama Models config
+Write-Host ""
+if ($SkipCursor -or $SkipCursorConfig) {
+  Write-Host "[6/8] Skip Cursor Ollama config (-SkipCursor / -SkipCursorConfig)"
+} else {
+  Write-Host "[6/8] Install-CursorConfig.ps1 (Models → Ollama)"
+  $cfgArgs = @{ SetAsDefault = $true }
+  if ($ForceCursorConfig) { $cfgArgs["Force"] = $true }
+  try {
+    & (Join-Path $Scripts "Install-CursorConfig.ps1") @cfgArgs
+  } catch {
+    Write-Warning "Cursor Ollama config skipped: $_"
+    Write-Host "  Quit Cursor and run: .\scripts\Install-CursorConfig.ps1"
+  }
+}
+
+# 7) VS Code Continue → Ollama
+Write-Host ""
+if ($SkipContinueConfig) {
+  Write-Host "[7/8] SkipContinueConfig set - not writing Continue config"
+} else {
+  Write-Host "[7/8] Install-ContinueConfig.ps1 (VS Code Continue → Ollama)"
+  $contArgs = @{}
+  if ($ForceContinueConfig) { $contArgs["Force"] = $true }
+  try {
+    & (Join-Path $Scripts "Install-ContinueConfig.ps1") @contArgs
+  } catch {
+    Write-Warning "VS Code Continue config skipped: $_"
+    Write-Host "  Run: .\scripts\Install-ContinueConfig.ps1 -Force"
+  }
+}
+
+# 8) Verify
+Write-Host "[8/8] Test-LocalSetup.ps1"
 & (Join-Path $Scripts "Test-LocalSetup.ps1")
 
 Write-Host ""
 Write-Host "=== Next (editor / tools) - see docs\integrations.md and README Cases H-K ==="
-Write-Host "VS Code: .\scripts\Install-ContinueConfig.ps1"
-Write-Host "Cursor: Models base URL http://localhost:11434/v1  key: ollama  model: (from ollama list)"
-Write-Host "  (install/check: .\scripts\Install-Cursor.ps1)"
-Write-Host "Codegraph: run 'codegraph init' in each project that needs the graph"
+Write-Host "VS Code: .\scripts\Install-ContinueConfig.ps1   (alias: Install-VSCodeConfig.ps1)"
+Write-Host "Cursor:  .\scripts\Install-CursorConfig.ps1   (quit Cursor first if it overwrites)"
+Write-Host "Codegraph: .\scripts\Install-Codegraph.ps1 -ProjectPath <repo>  (fnm → npm → install → init)"
 Write-Host "GPU check: .\scripts\Test-GpuSupport.ps1"
 if (-not $SkipHeadroomHint) {
-  Write-Host "Headroom: .\scripts\Start-HeadroomOllama.ps1  then base URL http://127.0.0.1:8787/v1"
+  Write-Host "Headroom: .\scripts\Start-HeadroomOllama.ps1  then Install-CursorConfig / Install-ContinueConfig -Headroom"
 }
 Write-Host ""
 Write-Host "Agent playbook: docs\agent-setup-playbook.md"

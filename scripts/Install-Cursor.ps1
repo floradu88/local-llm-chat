@@ -54,7 +54,7 @@ if ($CheckOnly) {
 
 if ($info.Installed -and -not $Force) {
   Write-Host "  Already installed - skipping install."
-  Write-Host "  Wire models: config\cursor-openai-local.example.md (Case I)"
+  Write-Host "  Wire Ollama: .\scripts\Install-CursorConfig.ps1  (Case I)"
   exit 0
 }
 
@@ -181,9 +181,7 @@ if (-not $after.Installed) {
 
 Write-Host ""
 Write-Host "Next (Case I - wire local Ollama):"
-Write-Host "  Settings > Models"
-Write-Host "    Base URL: http://localhost:11434/v1"
-Write-Host "    API key:  ollama"
-Write-Host "    Model:    tag from ollama list (e.g. qwen2.5-coder:7b)"
+Write-Host "  Quit Cursor if it is open, then:"
+Write-Host "    .\scripts\Install-CursorConfig.ps1"
 Write-Host "  Checklist: config\cursor-openai-local.example.md"
 exit 0

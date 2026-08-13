@@ -41,6 +41,10 @@ Flags:
 | `-ForceGpuDrivers` | Force driver install attempt (e.g. odd VM layouts) |
 | `-SkipCursor` | Do not check/install Cursor |
 | `-ForceCursor` | Re-run Cursor installer even if present |
+| `-SkipCursorConfig` | Do not run `Install-CursorConfig.ps1` |
+| `-ForceCursorConfig` | Pass `-Force` to Cursor Ollama config (quit Cursor first preferred) |
+| `-SkipContinueConfig` | Do not run `Install-ContinueConfig.ps1` |
+| `-ForceContinueConfig` | Overwrite `~\.continue\config.json` |
 
 What `Setup-Machine.ps1` does:
 
@@ -49,9 +53,11 @@ What `Setup-Machine.ps1` does:
 3. Optional GPU drivers when `-InstallGpuDrivers`
 4. Checks Cursor; installs **current-user** build if missing (unless `-SkipCursor`)
 5. Pulls tier coding models (**skips tags already on disk**; use `Update-CodingModels.ps1` or `-Force` to refresh)
-6. Runs `Test-LocalSetup.ps1` and prints editor / GPU / Headroom next steps
+6. Wires **Cursor Models → Ollama** via `Install-CursorConfig.ps1` (unless `-SkipCursorConfig`; quit Cursor if open)
+7. Wires **VS Code Continue → Ollama** via `Install-ContinueConfig.ps1` (unless `-SkipContinueConfig`; finds Code.exe, installs Continue extension)
+8. Runs `Test-LocalSetup.ps1` and prints GPU / Headroom next steps
 
-`Setup-FullLocalStack.ps1` also installs Continue config and runs `codegraph init` when available.
+`Setup-FullLocalStack.ps1` also force-refreshes Continue config and runs `Install-Codegraph.ps1` for `-ProjectPath` when available.
 
 ## Step 2 — verify
 
@@ -59,6 +65,8 @@ What `Setup-Machine.ps1` does:
 .\scripts\Test-LocalSetup.ps1
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Install-Cursor.ps1 -CheckOnly
+.\scripts\Install-CursorConfig.ps1 -CheckOnly
+.\scripts\Install-ContinueConfig.ps1 -CheckOnly
 ```
 
 Manual equivalent:
@@ -79,23 +87,28 @@ ollama run qwen2.5-coder:7b "Say ready"
 
 ## Step 3 — editor (required for “local models in the IDE”)
 
-Follow [integrations.md](integrations.md) and README Cases H/I:
+`Setup-Machine.ps1` already runs these unless skipped. Re-run manually per [integrations.md](integrations.md) and README Cases H/I:
 
-**VS Code:**
+**VS Code (Continue):**
 
 ```powershell
-.\scripts\Install-ContinueConfig.ps1
+.\scripts\Install-ContinueConfig.ps1   # finds Code.exe, installs Continue, writes ~/.continue/config.json
+# alias: .\scripts\Install-VSCodeConfig.ps1
+.\scripts\Install-ContinueConfig.ps1 -CheckOnly
 ```
 
-Then install the Continue extension; set model to an installed tag.
+Reload VS Code and select an Ollama model in Continue.
 
 **Cursor:**
 
 ```powershell
-.\scripts\Install-Cursor.ps1   # installs for current user if missing
+.\scripts\Install-Cursor.ps1          # installs for current user if missing
+# Quit Cursor, then:
+.\scripts\Install-CursorConfig.ps1    # wires Models → Ollama (state.vscdb)
+.\scripts\Install-CursorConfig.ps1 -CheckOnly
 ```
 
-Then Models → base URL `http://localhost:11434/v1`, API key `ollama`, model = Ollama tag. Checklist: `config\cursor-openai-local.example.md`.
+Checklist: `config\cursor-openai-local.example.md`. Manual Models UI still works as a fallback (base URL `http://localhost:11434/v1`, key `ollama`).
 
 ## Step 4 — optional GPU
 
@@ -111,16 +124,23 @@ A **VM** can use a GPU with Ollama only if the guest already sees an NVIDIA devi
 
 ```powershell
 .\scripts\Start-HeadroomOllama.ps1
+.\scripts\Install-CursorConfig.ps1 -Headroom
+.\scripts\Install-ContinueConfig.ps1 -Headroom -Force
 ```
 
-Then Cursor base URL → `http://127.0.0.1:8787/v1`.
+Then use base URL `http://127.0.0.1:8787/v1` (key `ollama`) if configuring the UI by hand.
 
 ## Step 6 — optional Codegraph
 
 ```powershell
-codegraph init
-# or: .\scripts\Initialize-Codegraph.ps1
+.\scripts\Install-Codegraph.ps1                              # this toolkit
+.\scripts\Install-Codegraph.ps1 -ProjectPath "D:\path\to\app" # your app
+.\scripts\Install-Codegraph.ps1 -CheckOnly -ProjectPath "D:\path\to\app"
+# Optional UAC for the agent-permissions pass:
+# .\scripts\Install-Codegraph.ps1 -Elevated -ProjectPath "D:\path\to\app"
 ```
+
+Flow: **fnm** (no admin) → Node → `npm i -g @colbymchenry/codegraph` → `codegraph install --no-permissions` → `codegraph install` (with permissions) → `codegraph init` if `.codegraph` missing.
 
 Structural tools use the local graph. Pull `nomic-embed-text` only if your Codegraph build needs embeddings.
 
@@ -142,10 +162,11 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 - [ ] Repo root opened; README Cases A–O and FEATURES.md reviewed
 - [ ] `Setup-Machine.ps1` succeeded (or manual steps in README)
 - [ ] `Test-LocalSetup.ps1` / `Show-SetupStatus.ps1` report OK
-- [ ] Cursor installed (`Install-Cursor.ps1 -CheckOnly`) and/or Continue pointed at Ollama
+- [ ] Cursor installed (`Install-Cursor.ps1 -CheckOnly`) and Models wired (`Install-CursorConfig.ps1 -CheckOnly`)
+- [ ] VS Code Continue wired (`Install-ContinueConfig.ps1 -CheckOnly` / `Install-VSCodeConfig.ps1`)
+- [ ] (Optional) Codegraph: `Install-Codegraph.ps1 -CheckOnly -ProjectPath <repo>`
 - [ ] (Optional) GPU checked / drivers installed
-- [ ] (Optional) Headroom on 8787
-- [ ] (Optional) `codegraph init` in target projects
+- [ ] (Optional) Headroom on 8787 (`Install-CursorConfig.ps1 -Headroom` / `Install-ContinueConfig.ps1 -Headroom`)
 
 ## Failure handling
 
@@ -157,6 +178,9 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 | Pull skipped unexpectedly | Confirm tag in `ollama list` / manifests; use `-Force` or `Update-CodingModels.ps1` |
 | HF gated | Set `HF_TOKEN`, accept license on Hub |
 | Cursor missing | `.\scripts\Install-Cursor.ps1` (per-user; no admin) |
+| Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` |
+| VS Code / Continue not wired | `.\scripts\Install-ContinueConfig.ps1` (finds Code.exe) |
+| Codegraph missing | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
 | VM has no GPU in guest | Expose GPU from host first; `Install-GpuDrivers.ps1` explains this |
 | No admin / policy blocks EXE | Document block; user must allow OllamaSetup / CursorSetup or use IT whitelist |
 

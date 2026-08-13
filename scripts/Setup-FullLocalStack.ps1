@@ -4,12 +4,12 @@
 
 .DESCRIPTION
   Scenario: after git clone, install everything needed to use local models + Codegraph.
-  1) Ollama env + install + model pulls (Setup-Machine)
+  1) Ollama env + install + model pulls + Cursor/VS Code Ollama config (Setup-Machine)
   2) Optional three example model pulls
-  3) Continue config for VS Code
-  4) codegraph init (index) when CLI is available
+  3) Continue config for VS Code (force refresh)
+  4) Codegraph: Install-Codegraph.ps1 (fnm/Node, agent wire, init) when not skipped
   5) Status + verify
-  Prints Cursor wiring steps (manual).
+  Prints Cursor/VS Code re-wire commands if auto-config was skipped.
 
 .PARAMETER Tier
   8GB | 16GB | 32GB | Auto
@@ -32,6 +32,9 @@
 .PARAMETER SkipCursor / ForceCursor
   Passed through to Setup-Machine (Cursor check + per-user install).
 
+.PARAMETER SkipCursorConfig / ForceCursorConfig
+  Passed through to Setup-Machine (Install-CursorConfig.ps1).
+
 .PARAMETER ModelsRoot
   Optional OLLAMA_MODELS override.
 #>
@@ -50,6 +53,8 @@ param(
   [switch] $ForceGpuDrivers,
   [switch] $SkipCursor,
   [switch] $ForceCursor,
+  [switch] $SkipCursorConfig,
+  [switch] $ForceCursorConfig,
   [string] $ModelsRoot = ""
 )
 
@@ -83,6 +88,8 @@ if ($InstallGpuDrivers) { $setupArgs["InstallGpuDrivers"] = $true }
 if ($ForceGpuDrivers) { $setupArgs["ForceGpuDrivers"] = $true }
 if ($SkipCursor) { $setupArgs["SkipCursor"] = $true }
 if ($ForceCursor) { $setupArgs["ForceCursor"] = $true }
+if ($SkipCursorConfig) { $setupArgs["SkipCursorConfig"] = $true }
+if ($ForceCursorConfig) { $setupArgs["ForceCursorConfig"] = $true }
 & (Join-Path $Scripts "Setup-Machine.ps1") @setupArgs
 
 if ($PullExampleModels -and -not $SkipPull) {
@@ -103,30 +110,11 @@ if (-not $SkipContinue) {
   Write-Host "[2/5] SkipContinue"
 }
 
-# --- 3) Codegraph index ---
+# --- 3) Codegraph install + index ---
 Write-Host ""
 if (-not $SkipCodegraph) {
-  Write-Host "[3/5] Codegraph index: $ProjectPath"
-  $cg = Get-Command codegraph -ErrorAction SilentlyContinue
-  if (-not $cg) {
-    Write-Warning "codegraph CLI not on PATH."
-    Write-Host "  Install your Codegraph distribution, ensure 'codegraph' is on PATH, then re-run:"
-    Write-Host "    codegraph init"
-    Write-Host "  in: $ProjectPath"
-  } else {
-    Push-Location $ProjectPath
-    try {
-      Write-Host "  Running: codegraph init"
-      & codegraph init
-      if ($LASTEXITCODE -ne 0) {
-        Write-Warning "codegraph init exited with $LASTEXITCODE"
-      } else {
-        Write-Host "  Codegraph index OK (.codegraph)"
-      }
-    } finally {
-      Pop-Location
-    }
-  }
+  Write-Host "[3/5] Install-Codegraph.ps1 (fnm → npm → agent install → init): $ProjectPath"
+  & (Join-Path $Scripts "Install-Codegraph.ps1") -ProjectPath $ProjectPath
 } else {
   Write-Host "[3/5] SkipCodegraph"
 }
@@ -146,11 +134,10 @@ if (-not $SkipVerify) {
 }
 
 Write-Host ""
-Write-Host "=== Cursor (manual) ==="
-Write-Host "Settings > Models:"
-Write-Host "  Base URL: http://localhost:11434/v1"
-Write-Host "  API key:  ollama"
-Write-Host "  Model:    qwen2.5-coder:7b  (or deepseek-coder-v2:16b / codellama:13b)"
+Write-Host "=== Editors → Ollama ==="
+Write-Host "  VS Code: .\scripts\Install-ContinueConfig.ps1   (alias: Install-VSCodeConfig.ps1)"
+Write-Host "  Cursor:  .\scripts\Install-CursorConfig.ps1     (quit Cursor first)"
+Write-Host "  Headroom: .\scripts\Start-HeadroomOllama.ps1 then either script with -Headroom"
 Write-Host ""
 Write-Host "=== Next ==="
 Write-Host "  GPU check:     .\scripts\Test-GpuSupport.ps1"

@@ -23,9 +23,17 @@ When asked to set up local models or this repo on a machine, run or guide:
 
 Use `-Tier 8GB`, `16GB`, or `32GB` from the user's RAM. Prefer scripts in `scripts/` over ad-hoc commands. After setup, run `.\scripts\Test-LocalSetup.ps1` and `.\scripts\Show-SetupStatus.ps1` if needed. First-time flows are documented as Cases A–O in `README.md`.
 
+`Setup-Machine.ps1` also wires editors when possible:
+
+- Cursor install + Models → Ollama (`Install-Cursor.ps1` / `Install-CursorConfig.ps1`)
+- VS Code Continue → Ollama (`Install-ContinueConfig.ps1` / alias `Install-VSCodeConfig.ps1`)
+
 Notable helpers:
 
-- `Install-Cursor.ps1` — check / per-user install (also run by Setup-Machine unless `-SkipCursor`)
+- `Install-Cursor.ps1` — check / per-user install (unless `-SkipCursor`)
+- `Install-CursorConfig.ps1` — find Cursor + write Models → Ollama into `state.vscdb` (**quit Cursor first**; unless `-SkipCursorConfig`)
+- `Install-ContinueConfig.ps1` / `Install-VSCodeConfig.ps1` — find VS Code (`Code.exe`), install Continue extension, write `~\.continue\config.json` (unless `-SkipContinueConfig`)
+- `Install-Codegraph.ps1` — fnm + Node (no admin) → npm Codegraph → `--no-permissions` then permissions → `codegraph init` if needed
 - `Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` — GPU + VM guidance
 - Pull/download scripts skip models already on disk unless `-Force` (or `Update-CodingModels.ps1`)
 
@@ -34,4 +42,4 @@ Notable helpers:
 - Do not commit `.gguf`, `models/**` blobs, or API/HF tokens.
 - Only download models from sources in `docs/trusted-sources.md`.
 - Ollama is the primary runtime; do not switch the stack to LM Studio unless asked.
-- After setup, verify `ollama list` and `http://localhost:11434/api/tags`, then point the editor at Ollama per `docs/integrations.md`.
+- After setup, verify `ollama list` and `http://localhost:11434/api/tags`. Confirm editor rows in `Show-SetupStatus.ps1` (H/H-cfg, I/I-cfg). Re-run `Install-ContinueConfig.ps1` or `Install-CursorConfig.ps1` if needed (see `docs/integrations.md`).
