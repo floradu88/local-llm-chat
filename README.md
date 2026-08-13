@@ -129,8 +129,7 @@ Gated Hub models: set `$env:HF_TOKEN = "hf_..."` (or `-Token`) after accepting t
 
 ```powershell
 # models must already show in: ollama list
-New-Item -ItemType Directory -Force -Path "$HOME\.continue" | Out-Null
-Copy-Item .\config\continue.config.example.json "$HOME\.continue\config.json"
+.\scripts\Install-ContinueConfig.ps1
 ```
 
 Install the **Continue** extension in VS Code, reload, pick an Ollama model from the config. Details: [docs/integrations.md](docs/integrations.md).
@@ -175,13 +174,9 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 ### Case L — Verify everything
 
 ```powershell
-ollama --version
-ollama list
-Invoke-RestMethod http://localhost:11434/api/tags
-ollama run qwen2.5-coder:7b "Reply with: ok"
+.\scripts\Test-LocalSetup.ps1
+# optional: .\scripts\Test-LocalSetup.ps1 -Model qwen2.5-coder:7b
 ```
-
-(Use a tag that appears in `ollama list`.)
 
 | Symptom | Fix |
 |---------|-----|
@@ -193,14 +188,25 @@ ollama run qwen2.5-coder:7b "Reply with: ok"
 
 ---
 
+### Case M — ModelScope / GitHub Releases direct URL
+
+```powershell
+.\scripts\Download-FromUrl.ps1 -Url "https://.../model.Q4_K_M.gguf" -OutDir ".\models\gguf\external"
+.\scripts\Import-GGUF.ps1 -GgufPath ".\models\gguf\external\model.Q4_K_M.gguf" -Name "external-coder"
+```
+
+---
+
 ### Suggested order for a brand-new clone
 
-1. **Case A** (or B if Ollama exists)  
-2. **Case L** (verify)  
+1. **Case A** (or B if Ollama exists) — includes verify via `Test-LocalSetup`  
+2. **Case L** again if anything looked wrong  
 3. **Case H** and/or **Case I** (editor)  
-4. Optional: **Case J** (Headroom), **Case K** (Codegraph), **Case F/G** (extra models)
+4. Optional: **Case J** (Headroom), **Case K** (Codegraph), **Case F/G/M** (extra models)
 
 Agents/LLMs in this repo: read [AGENTS.md](AGENTS.md) and [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md). Cursor always loads [`.cursor/rules/local-llm-setup.mdc`](.cursor/rules/local-llm-setup.mdc).
+
+**Note:** [LM Studio](https://lmstudio.ai) is an alternative desktop UI; this repo standardizes on **Ollama** as the primary runtime.
 
 ## Architecture
 
@@ -228,8 +234,8 @@ Codegraph MCP ──────────────────────
 | System RAM (approx) | Suggested Ollama pulls |
 |---------------------|------------------------|
 | 8–12 GB | `qwen2.5-coder:3b`, `starcoder2:3b` |
-| 16 GB | `qwen2.5-coder:7b` |
-| 32 GB+ | `qwen2.5-coder:14b` / `32b`, `codellama:13b` / `34b` |
+| 16 GB | `qwen2.5-coder:7b`, `starcoder2:3b` |
+| 32 GB+ | `qwen2.5-coder:14b`, `codellama:13b`, `deepseek-coder-v2:16b`, `starcoder2:7b` |
 
 ## Repo layout
 
@@ -257,15 +263,19 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 
 | Script | Role |
 |--------|------|
-| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + install + pull |
+| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + install + pull + verify |
+| `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
 | `scripts/Set-OllamaEnv.ps1` | Set `OLLAMA_MODELS` / install dir |
 | `scripts/Install-Ollama.ps1` | Official per-user install |
+| `scripts/Install-ContinueConfig.ps1` | Copy Continue config for VS Code (Case H) |
 | `scripts/Download-FromOllama.ps1` | `ollama pull` (+ optional `hf.co` bridge) |
 | `scripts/Download-FromHuggingFace.ps1` | Download GGUF to `models/gguf` |
+| `scripts/Download-FromUrl.ps1` | Direct URL (ModelScope / GitHub Releases) |
 | `scripts/Import-GGUF.ps1` | Register local GGUF with `ollama create` |
 | `scripts/New-CoderModelfile.ps1` | Generate a coding-tuned Modelfile |
 | `scripts/Pull-CodingModels.ps1` | Opinionated pulls by RAM tier |
 | `scripts/Start-HeadroomOllama.ps1` | Headroom proxy → Ollama `/v1` |
+| `scripts/_common.ps1` | Shared helpers (dot-sourced; not run alone) |
 
 ## License note
 

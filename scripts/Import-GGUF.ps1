@@ -38,8 +38,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "_common.ps1")
 
-if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
+if (-not (Test-OllamaCommand)) {
   throw "ollama not found on PATH. Run .\scripts\Install-Ollama.ps1 first."
 }
 

@@ -15,6 +15,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "_common.ps1")
 
 if ($InstallDir) {
   New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -25,17 +26,10 @@ if ($InstallDir) {
 Write-Host "Downloading and running official Ollama Windows installer..."
 irm https://ollama.com/install.ps1 | iex
 
-# Ensure current session can see the per-user install
-$ollamaBin = Join-Path $env:LOCALAPPDATA "Programs\Ollama"
-if (Test-Path $ollamaBin) {
-  if ($env:Path -notlike "*$ollamaBin*") {
-    $env:Path = "$ollamaBin;$env:Path"
-  }
-}
+Add-OllamaToSessionPath
 
-$ollamaCmd = Get-Command ollama -ErrorAction SilentlyContinue
-if (-not $ollamaCmd) {
-  Write-Warning "ollama not on PATH yet. Open a new PowerShell window, or add: $ollamaBin"
+if (-not (Test-OllamaCommand)) {
+  Write-Warning "ollama not on PATH yet. Open a new PowerShell window, or add: $($env:LOCALAPPDATA)\Programs\Ollama"
   exit 1
 }
 
@@ -45,13 +39,11 @@ if (-not $SkipStart) {
   Write-Host "Waiting for API on http://localhost:11434 ..."
   $ok = $false
   for ($i = 0; $i -lt 30; $i++) {
-    try {
-      Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -TimeoutSec 2 | Out-Null
+    if (Test-OllamaApi -TimeoutSec 2) {
       $ok = $true
       break
-    } catch {
-      Start-Sleep -Seconds 2
     }
+    Start-Sleep -Seconds 2
   }
   if ($ok) {
     Write-Host "Ollama API is reachable."

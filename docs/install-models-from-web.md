@@ -94,18 +94,31 @@ Example Modelfile body:
 FROM D:/code/projects/local-llm-chat/models/gguf/.../model.Q4_K_M.gguf
 PARAMETER temperature 0.2
 PARAMETER num_ctx 8192
-SYSTEM You are a careful coding assistant. Prefer correct, minimal changes and explain briefly when asked.
+SYSTEM You are a careful coding assistant for the local-llm-chat repo. Prefer correct, minimal changes. For installing or configuring Ollama/local models on this machine, follow AGENTS.md and docs/agent-setup-playbook.md and run scripts/Setup-Machine.ps1. Use only trusted sources in docs/trusted-sources.md. Never commit model weights or tokens.
 ```
 
-## Path D — ModelScope
+## Path D — ModelScope or any direct URL
 
-1. Open the model on [modelscope.cn](https://modelscope.cn) and download the GGUF (same quant as on HF if possible).
-2. Place it under `models/gguf/<org>/<name>/`.
-3. Run `Import-GGUF.ps1` as in Path C.
+1. Copy the download URL for the `.gguf` from [modelscope.cn](https://modelscope.cn) (or upstream GitHub Releases).
+2. Download into this repo:
+
+```powershell
+.\scripts\Download-FromUrl.ps1 `
+  -Url "https://example.com/path/model.Q4_K_M.gguf" `
+  -OutDir ".\models\gguf\modelscope\my-model"
+```
+
+3. Import:
+
+```powershell
+.\scripts\Import-GGUF.ps1 -GgufPath ".\models\gguf\modelscope\my-model\model.Q4_K_M.gguf" -Name "my-coder"
+```
+
+Cross-check the model card against the Hugging Face original (name, license, quant).
 
 ## Path E — GitHub Releases
 
-1. Download the `.gguf` from the **upstream** project’s Releases only.
+1. Download the `.gguf` from the **upstream** project’s Releases only (or use `Download-FromUrl.ps1`).
 2. Save under `models/gguf/` → `Import-GGUF.ps1`.
 
 ## Verify

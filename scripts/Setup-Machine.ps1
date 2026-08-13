@@ -34,6 +34,7 @@ param(
 $ErrorActionPreference = "Stop"
 $Scripts = $PSScriptRoot
 $RepoRoot = Split-Path -Parent $Scripts
+. (Join-Path $Scripts "_common.ps1")
 
 Set-Location $RepoRoot
 Write-Host "=== local-llm-chat machine setup ==="
@@ -44,54 +45,47 @@ Write-Host ""
 # 1) Env
 $envArgs = @{ Persistent = $true }
 if ($ModelsRoot) { $envArgs["ModelsRoot"] = $ModelsRoot }
-Write-Host "[1/3] Set-OllamaEnv.ps1"
+Write-Host "[1/4] Set-OllamaEnv.ps1"
 & (Join-Path $Scripts "Set-OllamaEnv.ps1") @envArgs
 
 # 2) Install
 if (-not $SkipInstall) {
-  $have = Get-Command ollama -ErrorAction SilentlyContinue
-  if ($have) {
+  if (Test-OllamaCommand) {
     $ver = ollama --version
-    Write-Host "[2/3] Ollama already on PATH: $ver - skipping install."
+    Write-Host "[2/4] Ollama already on PATH: $ver - skipping install."
   }
   else {
-    Write-Host "[2/3] Install-Ollama.ps1"
+    Write-Host "[2/4] Install-Ollama.ps1"
     & (Join-Path $Scripts "Install-Ollama.ps1")
+    Add-OllamaToSessionPath
   }
 }
 else {
-  Write-Host "[2/3] SkipInstall set - not installing."
+  Write-Host "[2/4] SkipInstall set - not installing."
+  Add-OllamaToSessionPath
 }
 
-if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
+if (-not (Test-OllamaCommand)) {
   throw "ollama still not on PATH. Open a new PowerShell and re-run Setup-Machine.ps1 -SkipInstall, or check LocalAppData\Programs\Ollama."
 }
 
 # 3) Pulls
 if (-not $SkipPull) {
-  Write-Host "[3/3] Pull-CodingModels.ps1 -Tier $Tier"
-  & (Join-Path $Scripts "Pull-CodingModels.ps1") -Tier $Tier
+  Write-Host "[3/4] Pull-CodingModels.ps1 -Tier $Tier"
+  & (Join-Path $Scripts "Pull-CodingModels.ps1") -Tier $Tier -SkipSmoke
 }
 else {
-  Write-Host "[3/3] SkipPull set - not pulling models."
+  Write-Host "[3/4] SkipPull set - not pulling models."
   ollama list
 }
 
-Write-Host ""
-Write-Host "=== Verify ==="
-ollama --version
-try {
-  $tags = Invoke-RestMethod http://localhost:11434/api/tags
-  $count = @($tags.models).Count
-  Write-Host "API OK - $count model(s)"
-}
-catch {
-  Write-Warning "API not reachable yet. Start Ollama from the tray/Start menu, then: Invoke-RestMethod http://localhost:11434/api/tags"
-}
+# 4) Verify
+Write-Host "[4/4] Test-LocalSetup.ps1"
+& (Join-Path $Scripts "Test-LocalSetup.ps1")
 
 Write-Host ""
-Write-Host "=== Next (editor / tools) - see docs\integrations.md ==="
-Write-Host "VS Code: install Continue; copy config\continue.config.example.json to `$HOME\.continue\config.json"
+Write-Host "=== Next (editor / tools) - see docs\integrations.md and README Cases H-K ==="
+Write-Host "VS Code: .\scripts\Install-ContinueConfig.ps1"
 Write-Host "Cursor: Models base URL http://localhost:11434/v1  key: ollama  model: (from ollama list)"
 Write-Host "Codegraph: run 'codegraph init' in each project that needs the graph"
 if (-not $SkipHeadroomHint) {

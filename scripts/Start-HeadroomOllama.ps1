@@ -19,11 +19,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "_common.ps1")
 
-# Ensure Ollama is up
-try {
-  Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/tags" -TimeoutSec 3 | Out-Null
-} catch {
+if (-not (Test-OllamaApi)) {
   throw "Ollama API not reachable at http://127.0.0.1:11434. Start Ollama first."
 }
 

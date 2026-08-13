@@ -40,9 +40,15 @@ What it does:
 1. Sets `OLLAMA_MODELS` to `.\models\ollama` (User env)
 2. Installs Ollama via official script (if needed)
 3. Pulls tier coding models
-4. Prints Continue / Cursor / Codegraph / Headroom next steps
+4. Runs `Test-LocalSetup.ps1` and prints Continue / Cursor / Codegraph / Headroom next steps
 
 ## Step 2 — verify
+
+```powershell
+.\scripts\Test-LocalSetup.ps1
+```
+
+Manual equivalent:
 
 ```powershell
 ollama --version
@@ -60,9 +66,15 @@ ollama run qwen2.5-coder:7b "Say ready"
 
 ## Step 3 — editor (required for “local models in the IDE”)
 
-Follow [integrations.md](integrations.md):
+Follow [integrations.md](integrations.md) and README Cases H/I:
 
-**VS Code:** install Continue; copy `config\continue.config.example.json` → `%USERPROFILE%\.continue\config.json`; set model to an installed tag.
+**VS Code:**
+
+```powershell
+.\scripts\Install-ContinueConfig.ps1
+```
+
+Then install the Continue extension; set model to an installed tag.
 
 **Cursor:** Models → base URL `http://localhost:11434/v1`, API key `ollama`, model = Ollama tag. Checklist: `config\cursor-openai-local.example.md`.
 
@@ -95,10 +107,9 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 
 ## Agent checklist (copy/paste)
 
-- [ ] Repo root opened
-- [ ] `Setup-Machine.ps1` succeeded (or manual steps 1–3 in README)
-- [ ] `ollama list` shows coding model(s)
-- [ ] API `http://localhost:11434/api/tags` OK
+- [ ] Repo root opened; README Cases A-M reviewed
+- [ ] `Setup-Machine.ps1` succeeded (or manual steps in README)
+- [ ] `Test-LocalSetup.ps1` reports OK
 - [ ] Continue and/or Cursor pointed at Ollama
 - [ ] (Optional) Headroom on 8787
 - [ ] (Optional) `codegraph init` in target projects
@@ -115,6 +126,7 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 
 ## Source of truth
 
-- [AGENTS.md](../AGENTS.md) — how agents should behave in this repo  
-- [powershell-ollama-setup.md](powershell-ollama-setup.md) — detailed install  
-- Scripts under `../scripts/` — do not reinvent installers
+- [README.md](../README.md) - first-time Cases A-M after clone
+- [AGENTS.md](../AGENTS.md) - how agents should behave in this repo
+- [powershell-ollama-setup.md](powershell-ollama-setup.md) - detailed install
+- Scripts under `../scripts/` - do not reinvent installers

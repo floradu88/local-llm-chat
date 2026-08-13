@@ -121,6 +121,7 @@ Settings → Apps → Ollama → Uninstall. If you set `OLLAMA_MODELS`, remove t
 
 ## Next
 
+- Verify: `.\scripts\Test-LocalSetup.ps1`
 - Import from Hugging Face / other sources: [install-models-from-web.md](install-models-from-web.md)
 - Trusted hosts: [trusted-sources.md](trusted-sources.md)
 - Editor + Headroom + Codegraph: [integrations.md](integrations.md)

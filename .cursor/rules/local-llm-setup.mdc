@@ -20,7 +20,7 @@ When asked to set up local models or this repo on a machine, run or guide:
 .\scripts\Setup-Machine.ps1 -Tier 16GB
 ```
 
-Use `-Tier 8GB` or `32GB` from the user's RAM. Prefer scripts in `scripts/` over ad-hoc commands.
+Use `-Tier 8GB` or `32GB` from the user's RAM. Prefer scripts in `scripts/` over ad-hoc commands. After setup, run `.\scripts\Test-LocalSetup.ps1` if needed. First-time flows are documented as Cases A-M in `README.md`.
 
 ## Constraints
 

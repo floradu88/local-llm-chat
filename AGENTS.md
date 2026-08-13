@@ -4,7 +4,7 @@ You are working in the **local-llm-chat** repo. Its purpose is to install and ru
 
 ## Always do this first
 
-1. Read [README.md](README.md) for layout and quick start.
+1. Read [README.md](README.md) — especially **First time after git clone** (Cases A–M).
 2. To **set up this machine**, follow [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md) or run:
 
 ```powershell
@@ -30,11 +30,12 @@ cd <repo-root>
 1. `.\scripts\Set-OllamaEnv.ps1 -Persistent`
 2. `.\scripts\Install-Ollama.ps1`
 3. `.\scripts\Pull-CodingModels.ps1 -Tier <8GB|16GB|32GB>` (or download/import from HF — see docs)
-4. Wire editor: [docs/integrations.md](docs/integrations.md)
-5. Optional: `.\scripts\Start-HeadroomOllama.ps1`
-6. Optional: `codegraph init` in projects that need the graph
+4. `.\scripts\Test-LocalSetup.ps1`
+5. Wire editor: `.\scripts\Install-ContinueConfig.ps1` and/or Cursor per [docs/integrations.md](docs/integrations.md)
+6. Optional: `.\scripts\Start-HeadroomOllama.ps1`
+7. Optional: `codegraph init` in projects that need the graph
 
-One-shot: `.\scripts\Setup-Machine.ps1` (does 1–3 and prints editor steps).
+One-shot: `.\scripts\Setup-Machine.ps1` (does 1–4 and prints editor steps).
 
 ## Trusted sources only
 
@@ -43,16 +44,17 @@ Follow [docs/trusted-sources.md](docs/trusted-sources.md):
 1. Ollama Library  
 2. Hugging Face (official orgs / known GGUF packagers)  
 3. `hf.co/...` via Ollama  
-4. ModelScope / upstream GitHub Releases → same GGUF import path  
+4. ModelScope / upstream GitHub Releases → `Download-FromUrl.ps1` + `Import-GGUF.ps1`  
 
 Do not fetch models from random Drive/Telegram/unsigned mirrors.
 
 ## When the user asks to “set up local models”
 
 - Run or guide `Setup-Machine.ps1` with an appropriate `-Tier` from their RAM.
-- Verify with `ollama list` and `Invoke-RestMethod http://localhost:11434/api/tags`.
+- Verify with `.\scripts\Test-LocalSetup.ps1`.
 - Point them at Continue/Cursor config under `config/` and [docs/integrations.md](docs/integrations.md).
 - For Hugging Face GGUF: `Download-FromHuggingFace.ps1` then `Import-GGUF.ps1`.
+- For ModelScope/GitHub URL: `Download-FromUrl.ps1` then `Import-GGUF.ps1`.
 
 ## When answering coding questions in this workspace
 
@@ -63,4 +65,4 @@ Do not fetch models from random Drive/Telegram/unsigned mirrors.
 
 - Shipping weights in git  
 - Requiring admin / Windows services unless the user asks  
-- Treating LM Studio as primary (Ollama is primary)
+- Treating LM Studio as primary (Ollama is primary; LM Studio is optional alternative UI only)

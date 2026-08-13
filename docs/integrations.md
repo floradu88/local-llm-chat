@@ -11,6 +11,8 @@ If this machine is not set up yet, run `.\scripts\Setup-Machine.ps1` first (see 
 
 ```powershell
 Copy-Item .\config\continue.config.example.json $HOME\.continue\config.json
+# or:
+.\scripts\Install-ContinueConfig.ps1
 ```
 
 Or merge the Ollama block into your existing Continue config. Set `model` to a tag from `ollama list` (e.g. `qwen2.5-coder:7b`).

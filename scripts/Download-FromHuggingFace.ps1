@@ -32,6 +32,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "_common.ps1")
 
 if ($Token) {
   $env:HF_TOKEN = $Token
@@ -75,12 +76,15 @@ $hf = Get-HfCli
 if (-not $hf) {
   Write-Host "huggingface-cli not found. Installing huggingface_hub for current user..."
   python -m pip install --user "huggingface_hub[cli]"
+  Add-PythonUserScriptsToPath
   $hf = Get-HfCli
   if (-not $hf) {
-    # common user Scripts path
-    $userScripts = Join-Path $env:APPDATA "Python"
     $candidates = Get-ChildItem -Path $env:LOCALAPPDATA, $env:APPDATA -Filter "huggingface-cli.exe" -Recurse -ErrorAction SilentlyContinue |
       Select-Object -First 1 -ExpandProperty FullName
+    if (-not $candidates) {
+      $candidates = Get-ChildItem -Path $env:LOCALAPPDATA, $env:APPDATA -Filter "hf.exe" -Recurse -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    }
     if ($candidates) { $hf = $candidates }
   }
 }

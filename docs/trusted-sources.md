@@ -47,13 +47,13 @@ Gated models (e.g. some Llama) need a Hugging Face account + license accept + to
 
 - Site: [modelscope.cn](https://modelscope.cn)
 - Use when Hugging Face is slow or blocked.
-- Download the same GGUF (or matching quant) into `models/gguf/`, then `.\scripts\Import-GGUF.ps1`.
+- Script: `.\scripts\Download-FromUrl.ps1 -Url "<gguf-url>"` then `.\scripts\Import-GGUF.ps1`
 - Cross-check the model card against the Hugging Face original (name, license, quant).
 
 ### 4. Upstream GitHub Releases
 
-- Only from the **model author’s** org (e.g. official release assets).
-- Save the `.gguf` under `models/gguf/` → import with `Import-GGUF.ps1`.
+- Only from the **model author's** org (e.g. official release assets).
+- Script: `.\scripts\Download-FromUrl.ps1` then `Import-GGUF.ps1`.
 
 ## Quantization (quick guide)
 
