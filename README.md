@@ -52,7 +52,17 @@ On low RAM / CPU-only machines, prefer smaller tags first (`qwen2.5-coder:3b`, `
 
 ### Case A — Fresh machine (most common)
 
-No Ollama yet. ~16 GB RAM. Want coding models + later IDE wiring.
+No Ollama yet. Want coding models + later IDE wiring.
+
+**Full scenario** (install tools, download models, index code, verify):
+
+```powershell
+.\scripts\Setup-FullLocalStack.ps1 -Tier Auto -PullExampleModels
+# Index another app instead of this repo:
+# .\scripts\Setup-FullLocalStack.ps1 -Tier Auto -PullExampleModels -ProjectPath "D:\path\to\your-app"
+```
+
+**Ollama-only one shot:**
 
 ```powershell
 .\scripts\Setup-Machine.ps1 -Tier Auto
@@ -265,6 +275,38 @@ On unsupported GPUs (e.g. Kepler GT 650M / old drivers), Ollama stays on **CPU**
 
 ---
 
+### Case O — Multiple models in parallel and in workflows
+
+Switch models in Continue/Cursor, or run scripts:
+
+```powershell
+# Parallel: same prompt to the three example models
+.\scripts\Invoke-ParallelModels.ps1 `
+  -Prompt "Write a PowerShell function that reverses a string. Code only." `
+  -Models @("qwen2.5-coder:7b", "deepseek-coder-v2:16b", "codellama:13b")
+
+# Sequential workflow: draft then review
+.\scripts\Invoke-ModelWorkflow.ps1 `
+  -Workflow DraftReview `
+  -Task "PowerShell: unique values of CSV column Name"
+
+# Plan then implement
+.\scripts\Invoke-ModelWorkflow.ps1 `
+  -Workflow PlanImplement `
+  -Task "Add retry with exponential backoff to Invoke-RestMethod"
+
+# Parallel compare + judge
+.\scripts\Invoke-ModelWorkflow.ps1 `
+  -Workflow CompareJudge `
+  -Task "Best way to parse JSON in PowerShell 5.1?"
+```
+
+Full patterns (editor roles, Headroom, Codegraph): [docs/multi-model-workflows.md](docs/multi-model-workflows.md).
+
+Prompts to map/understand code faster: [docs/code-understanding-prompts.md](docs/code-understanding-prompts.md).
+
+---
+
 ### Suggested order for a brand-new clone
 
 1. **Case A** (or B if Ollama exists) — includes verify via `Test-LocalSetup`  
@@ -325,6 +367,8 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | [FEATURES.md](FEATURES.md) | Feature checklist + machine checks + nice-to-haves |
 | [AGENTS.md](AGENTS.md) | Instructions for local agents / LLMs |
 | [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md) | Machine bootstrap checklist |
+| [docs/multi-model-workflows.md](docs/multi-model-workflows.md) | Parallel models + draft/review/plan workflows |
+| [docs/code-understanding-prompts.md](docs/code-understanding-prompts.md) | Copy-paste prompts to map/understand code faster |
 | [docs/powershell-admin-examples.md](docs/powershell-admin-examples.md) | Elevated / UAC PowerShell examples (GPU checks) |
 | [docs/powershell-ollama-setup.md](docs/powershell-ollama-setup.md) | Install Ollama, env vars, verify API |
 | [docs/trusted-sources.md](docs/trusted-sources.md) | Which hosts/orgs to trust |
@@ -335,8 +379,12 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 
 | Script | Role |
 |--------|------|
+| `scripts/Setup-FullLocalStack.ps1` | **Full scenario:** Ollama + models + Continue + codegraph init + verify |
+| `scripts/Initialize-Codegraph.ps1` | Index a project with `codegraph init` |
 | `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + install + pull + verify (`-Tier Auto`) |
 | `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–M |
+| `scripts/Invoke-ParallelModels.ps1` | Same prompt to multiple models concurrently |
+| `scripts/Invoke-ModelWorkflow.ps1` | DraftReview / PlanImplement / CompareJudge pipelines |
 | `scripts/Test-GpuSupport.ps1` | Non-admin GPU/Ollama check; `-Elevated` for admin UAC driver check |
 | `scripts/Test-GpuSupport.Elevated.ps1` | Admin-only helper (pnputil / driverquery / nvidia-smi) |
 | `scripts/Invoke-Elevated.ps1` | Generic `Start-Process -Verb RunAs` launcher for any script |

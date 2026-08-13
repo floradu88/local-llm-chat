@@ -7,3 +7,7 @@ Used by `.\scripts\Eval-CodingModel.ps1`. Keep prompts short so small local mode
 3. Fix this bug: `for i in range(5) print(i)` — return only the corrected line.
 4. Write a TypeScript type for a User with id:number and name:string. Return only the type.
 5. Given array [3,1,2], write JavaScript to sort ascending without mutating the original. Return only the code.
+
+For **mapping and understanding a real codebase** (entry points, call flows, change impact), use the copy-paste library:
+
+- [docs/code-understanding-prompts.md](../docs/code-understanding-prompts.md)

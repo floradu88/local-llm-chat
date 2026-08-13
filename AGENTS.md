@@ -9,7 +9,7 @@ You are working in the **local-llm-chat** repo. Its purpose is to install and ru
 
 ```powershell
 cd <repo-root>
-.\scripts\Setup-Machine.ps1 -Tier Auto
+.\scripts\Setup-FullLocalStack.ps1 -Tier Auto -PullExampleModels
 .\scripts\Show-SetupStatus.ps1
 ```
 

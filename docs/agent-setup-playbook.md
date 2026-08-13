@@ -23,6 +23,8 @@ Confirm `AGENTS.md`, `README.md`, and `scripts\` exist.
 Pick RAM tier: `8GB`, `16GB`, or `32GB`.
 
 ```powershell
+.\scripts\Setup-FullLocalStack.ps1 -Tier Auto -PullExampleModels
+# or Ollama-only:
 .\scripts\Setup-Machine.ps1 -Tier 16GB
 ```
 

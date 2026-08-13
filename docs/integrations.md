@@ -21,6 +21,8 @@ Or merge the Ollama block into your existing Continue config. Set `model` to a t
 
 Continue talks to Ollama directly at `http://localhost:11434` (no API key required for local).
 
+To use **multiple models**: keep several entries in the Continue config (see the three examples) and switch in the UI; for parallel/workflow scripts see [multi-model-workflows.md](multi-model-workflows.md).
+
 ## Cursor — local OpenAI-compatible endpoint
 
 ### Direct to Ollama
@@ -99,6 +101,8 @@ codegraph init
 Keep indexing local-first: do not send the repo to a cloud embed API unless you intentionally choose a cloud provider.
 
 If Cursor already has the Codegraph MCP server configured, ensure `codegraph init` has been run in the workspace so tools resolve symbols.
+
+**Faster understanding:** use Codegraph first, then prompts from [code-understanding-prompts.md](code-understanding-prompts.md).
 
 ## Suggested daily loop
 

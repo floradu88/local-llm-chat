@@ -8,6 +8,8 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 
 - [x] Non-admin Ollama install (`Install-Ollama.ps1`)
 - [x] `OLLAMA_MODELS` / env helper (`Set-OllamaEnv.ps1`)
+- [x] Full local stack bootstrap (`Setup-FullLocalStack.ps1`)
+- [x] Codegraph index helper (`Initialize-Codegraph.ps1`)
 - [x] One-shot bootstrap (`Setup-Machine.ps1`)
 - [x] Tiered coding model pulls (`Pull-CodingModels.ps1`)
 - [x] Three example coding models documented (Qwen2.5-Coder, DeepSeek-Coder-V2, CodeLlama)
@@ -22,7 +24,9 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Codegraph docs (`docs/integrations.md`)
 - [x] Trusted sources doc
 - [x] Agent instructions (`AGENTS.md`, Cursor/Continue rules)
-- [x] First-time-after-clone cases in README (A–N)
+- [x] First-time-after-clone cases in README (A–O)
+- [x] Multi-model parallel + workflows (`Invoke-ParallelModels.ps1`, `Invoke-ModelWorkflow.ps1`, `docs/multi-model-workflows.md`)
+- [x] Code-understanding prompt library (`docs/code-understanding-prompts.md`)
 - [x] Verify script (`Test-LocalSetup.ps1`)
 - [x] Expanded `.gitignore` for weights/secrets
 - [x] RAM auto-detect tier (`-Tier Auto`)
@@ -44,6 +48,10 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Elevate any script (`Invoke-Elevated.ps1`)
 - [x] Admin examples Patterns A/B/C (`docs/powershell-admin-examples.md`)
 - [x] Sample coding eval prompts
+- [x] Multi-model parallel fan-out (`Invoke-ParallelModels.ps1`)
+- [x] Multi-model sequential workflows (`Invoke-ModelWorkflow.ps1`)
+- [x] Multi-model docs (`docs/multi-model-workflows.md`)
+- [x] Code map/understand prompts (`docs/code-understanding-prompts.md`)
 
 ## Machine checklist (per PC — not automatic)
 
