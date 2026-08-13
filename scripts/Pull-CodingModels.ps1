@@ -3,14 +3,14 @@
   Pull an opinionated set of coding models for a RAM tier.
 
 .PARAMETER Tier
-  8GB | 16GB | 32GB
+  8GB | 16GB | 32GB | Auto (detect system RAM)
 
 .PARAMETER SkipSmoke
   Do not run a one-prompt smoke test after pulls.
 #>
 [CmdletBinding()]
 param(
-  [ValidateSet("8GB", "16GB", "32GB")]
+  [ValidateSet("8GB", "16GB", "32GB", "Auto")]
   [string] $Tier = "16GB",
   [switch] $SkipSmoke
 )
@@ -22,13 +22,8 @@ if (-not (Test-OllamaCommand)) {
   throw "ollama not found on PATH. Run .\scripts\Install-Ollama.ps1 first."
 }
 
-$sets = @{
-  "8GB"  = @("qwen2.5-coder:3b", "starcoder2:3b")
-  "16GB" = @("qwen2.5-coder:7b", "starcoder2:3b")
-  "32GB" = @("qwen2.5-coder:14b", "codellama:13b", "deepseek-coder-v2:16b", "starcoder2:7b")
-}
-
-$models = $sets[$Tier]
+$Tier = Resolve-CodingModelTier -Tier $Tier
+$models = Get-CodingModelsForTier -Tier $Tier
 $list = $models -join ", "
 Write-Host "Tier $Tier - pulling: $list"
 

@@ -28,16 +28,19 @@ Pick **one** common case below.
 No Ollama yet. ~16 GB RAM. Want coding models + later IDE wiring.
 
 ```powershell
-.\scripts\Setup-Machine.ps1 -Tier 16GB
+.\scripts\Setup-Machine.ps1 -Tier Auto
+# or: -Tier 16GB
 ```
 
-That sets `OLLAMA_MODELS` to `.\models\ollama`, installs Ollama (per-user, no admin), pulls the 16 GB tier models, and prints editor next steps.
+That sets `OLLAMA_MODELS` to `.\models\ollama`, installs Ollama (per-user, no admin), pulls models for your RAM tier (or the tier you pass), and prints editor next steps.
 
 **Other RAM tiers:**
 
 ```powershell
 .\scripts\Setup-Machine.ps1 -Tier 8GB    # light laptop
+.\scripts\Setup-Machine.ps1 -Tier 16GB
 .\scripts\Setup-Machine.ps1 -Tier 32GB   # more headroom / larger models
+.\scripts\Show-SetupStatus.ps1           # green/red checklist
 ```
 
 ---
@@ -204,7 +207,7 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 3. **Case H** and/or **Case I** (editor)  
 4. Optional: **Case J** (Headroom), **Case K** (Codegraph), **Case F/G/M** (extra models)
 
-Agents/LLMs in this repo: read [AGENTS.md](AGENTS.md) and [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md). Cursor always loads [`.cursor/rules/local-llm-setup.mdc`](.cursor/rules/local-llm-setup.mdc).
+Agents/LLMs in this repo: read [AGENTS.md](AGENTS.md), [FEATURES.md](FEATURES.md), and [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md). Cursor always loads [`.cursor/rules/local-llm-setup.mdc`](.cursor/rules/local-llm-setup.mdc).
 
 **Note:** [LM Studio](https://lmstudio.ai) is an alternative desktop UI; this repo standardizes on **Ollama** as the primary runtime.
 
@@ -252,6 +255,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 
 | Doc | Contents |
 |-----|----------|
+| [FEATURES.md](FEATURES.md) | Feature checklist + machine checks + nice-to-haves |
 | [AGENTS.md](AGENTS.md) | Instructions for local agents / LLMs |
 | [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md) | Machine bootstrap checklist |
 | [docs/powershell-ollama-setup.md](docs/powershell-ollama-setup.md) | Install Ollama, env vars, verify API |
@@ -263,8 +267,12 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 
 | Script | Role |
 |--------|------|
-| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + install + pull + verify |
+| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + install + pull + verify (`-Tier Auto`) |
+| `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–M |
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
+| `scripts/Update-CodingModels.ps1` | Re-pull / refresh tier models |
+| `scripts/Uninstall-Ollama.ps1` | Uninstall guidance + optional model cleanup |
+| `scripts/Eval-CodingModel.ps1` | Run sample coding prompts against a local model |
 | `scripts/Set-OllamaEnv.ps1` | Set `OLLAMA_MODELS` / install dir |
 | `scripts/Install-Ollama.ps1` | Official per-user install |
 | `scripts/Install-ContinueConfig.ps1` | Copy Continue config for VS Code (Case H) |
@@ -273,7 +281,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Download-FromUrl.ps1` | Direct URL (ModelScope / GitHub Releases) |
 | `scripts/Import-GGUF.ps1` | Register local GGUF with `ollama create` |
 | `scripts/New-CoderModelfile.ps1` | Generate a coding-tuned Modelfile |
-| `scripts/Pull-CodingModels.ps1` | Opinionated pulls by RAM tier |
+| `scripts/Pull-CodingModels.ps1` | Opinionated pulls by RAM tier / Auto |
 | `scripts/Start-HeadroomOllama.ps1` | Headroom proxy → Ollama `/v1` |
 | `scripts/_common.ps1` | Shared helpers (dot-sourced; not run alone) |
 

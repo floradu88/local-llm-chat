@@ -4,12 +4,13 @@ You are working in the **local-llm-chat** repo. Its purpose is to install and ru
 
 ## Always do this first
 
-1. Read [README.md](README.md) — especially **First time after git clone** (Cases A–M).
+1. Read [README.md](README.md) — especially **First time after git clone** (Cases A–M) — and [FEATURES.md](FEATURES.md).
 2. To **set up this machine**, follow [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md) or run:
 
 ```powershell
 cd <repo-root>
-.\scripts\Setup-Machine.ps1 -Tier 16GB
+.\scripts\Setup-Machine.ps1 -Tier Auto
+.\scripts\Show-SetupStatus.ps1
 ```
 
 3. Prefer existing scripts under `scripts/` over inventing new install commands.

@@ -7,7 +7,7 @@
   Does not configure VS Code/Cursor GUI settings (prints those steps).
 
 .PARAMETER Tier
-  RAM tier for Pull-CodingModels: 8GB | 16GB | 32GB
+  RAM tier for Pull-CodingModels: 8GB | 16GB | 32GB | Auto
 
 .PARAMETER SkipInstall
   Skip Ollama install (already installed).
@@ -23,8 +23,8 @@
 #>
 [CmdletBinding()]
 param(
-  [ValidateSet("8GB", "16GB", "32GB")]
-  [string] $Tier = "16GB",
+  [ValidateSet("8GB", "16GB", "32GB", "Auto")]
+  [string] $Tier = "Auto",
   [switch] $SkipInstall,
   [switch] $SkipPull,
   [switch] $SkipHeadroomHint,
@@ -35,6 +35,8 @@ $ErrorActionPreference = "Stop"
 $Scripts = $PSScriptRoot
 $RepoRoot = Split-Path -Parent $Scripts
 . (Join-Path $Scripts "_common.ps1")
+
+$Tier = Resolve-CodingModelTier -Tier $Tier
 
 Set-Location $RepoRoot
 Write-Host "=== local-llm-chat machine setup ==="
