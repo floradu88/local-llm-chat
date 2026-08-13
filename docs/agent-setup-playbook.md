@@ -8,7 +8,8 @@ Use this when a human or local agent must **set up this repo on a Windows machin
 - PowerShell 5.1+
 - Network for first-time Ollama + model downloads
 - Disk space for models (plan 10–50+ GB)
-- **No admin required** for default Ollama per-user install
+- **No admin required** for default Ollama / Cursor per-user installs
+- Optional admin (UAC) only for NVIDIA driver install / elevated GPU diagnostics
 
 ## Step 0 — open the repo
 
@@ -16,15 +17,15 @@ Use this when a human or local agent must **set up this repo on a Windows machin
 cd D:\code\projects\local-llm-chat   # or wherever this repo was cloned
 ```
 
-Confirm `AGENTS.md`, `README.md`, and `scripts\` exist.
+Confirm `AGENTS.md`, `README.md`, `FEATURES.md`, and `scripts\` exist.
 
 ## Step 1 — full bootstrap (recommended)
 
-Pick RAM tier: `8GB`, `16GB`, or `32GB`.
+Pick RAM tier: `8GB`, `16GB`, or `32GB` (or `Auto`).
 
 ```powershell
 .\scripts\Setup-FullLocalStack.ps1 -Tier Auto -PullExampleModels
-# or Ollama-only:
+# or Ollama + Cursor + pulls:
 .\scripts\Setup-Machine.ps1 -Tier 16GB
 ```
 
@@ -32,7 +33,7 @@ Flags:
 
 | Flag | Effect |
 |------|--------|
-| `-Tier 8GB\|16GB\|32GB` | Which coding models to pull |
+| `-Tier 8GB\|16GB\|32GB\|Auto` | Which coding models to pull |
 | `-SkipInstall` | Ollama already installed |
 | `-SkipPull` | Skip model pulls |
 | `-SkipHeadroomHint` | Less console output about Headroom |
@@ -41,17 +42,23 @@ Flags:
 | `-SkipCursor` | Do not check/install Cursor |
 | `-ForceCursor` | Re-run Cursor installer even if present |
 
-What it does:
+What `Setup-Machine.ps1` does:
 
 1. Sets `OLLAMA_MODELS` to `.\models\ollama` (User env)
 2. Installs Ollama via official script (if needed)
-3. Pulls tier coding models
-4. Runs `Test-LocalSetup.ps1` and prints Continue / Cursor / Codegraph / Headroom next steps
+3. Optional GPU drivers when `-InstallGpuDrivers`
+4. Checks Cursor; installs **current-user** build if missing (unless `-SkipCursor`)
+5. Pulls tier coding models (**skips tags already on disk**; use `Update-CodingModels.ps1` or `-Force` to refresh)
+6. Runs `Test-LocalSetup.ps1` and prints editor / GPU / Headroom next steps
+
+`Setup-FullLocalStack.ps1` also installs Continue config and runs `codegraph init` when available.
 
 ## Step 2 — verify
 
 ```powershell
 .\scripts\Test-LocalSetup.ps1
+.\scripts\Show-SetupStatus.ps1
+.\scripts\Install-Cursor.ps1 -CheckOnly
 ```
 
 Manual equivalent:
@@ -90,7 +97,17 @@ Then install the Continue extension; set model to an installed tag.
 
 Then Models → base URL `http://localhost:11434/v1`, API key `ollama`, model = Ollama tag. Checklist: `config\cursor-openai-local.example.md`.
 
-## Step 4 — optional Headroom
+## Step 4 — optional GPU
+
+```powershell
+.\scripts\Test-GpuSupport.ps1
+.\scripts\Install-GpuDrivers.ps1              # detect / VM guidance
+.\scripts\Install-GpuDrivers.ps1 -Install     # download + UAC when NVIDIA is visible
+```
+
+A **VM** can use a GPU with Ollama only if the guest already sees an NVIDIA device (passthrough / GPU-P / GRID / cloud GPU). Otherwise stay on CPU tiers.
+
+## Step 5 — optional Headroom
 
 ```powershell
 .\scripts\Start-HeadroomOllama.ps1
@@ -98,10 +115,11 @@ Then Models → base URL `http://localhost:11434/v1`, API key `ollama`, model = 
 
 Then Cursor base URL → `http://127.0.0.1:8787/v1`.
 
-## Step 5 — optional Codegraph
+## Step 6 — optional Codegraph
 
 ```powershell
 codegraph init
+# or: .\scripts\Initialize-Codegraph.ps1
 ```
 
 Structural tools use the local graph. Pull `nomic-embed-text` only if your Codegraph build needs embeddings.
@@ -115,14 +133,17 @@ If Library tags are not enough:
 .\scripts\Import-GGUF.ps1 -GgufPath ".\models\gguf\..." -Name "qwen25-coder-local"
 ```
 
+Downloads and imports **skip when the file / Ollama name already exists** unless you pass `-Force`.
+
 Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sources.md](trusted-sources.md).
 
 ## Agent checklist (copy/paste)
 
-- [ ] Repo root opened; README Cases A-M reviewed
+- [ ] Repo root opened; README Cases A–O and FEATURES.md reviewed
 - [ ] `Setup-Machine.ps1` succeeded (or manual steps in README)
-- [ ] `Test-LocalSetup.ps1` reports OK
-- [ ] Continue and/or Cursor pointed at Ollama
+- [ ] `Test-LocalSetup.ps1` / `Show-SetupStatus.ps1` report OK
+- [ ] Cursor installed (`Install-Cursor.ps1 -CheckOnly`) and/or Continue pointed at Ollama
+- [ ] (Optional) GPU checked / drivers installed
 - [ ] (Optional) Headroom on 8787
 - [ ] (Optional) `codegraph init` in target projects
 
@@ -133,12 +154,16 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 | `ollama` not found | New terminal after install; check `%LOCALAPPDATA%\Programs\Ollama` on PATH |
 | API down | Start Ollama from Start menu / tray |
 | Pull OOM / too large | Re-run with `-Tier 8GB` |
+| Pull skipped unexpectedly | Confirm tag in `ollama list` / manifests; use `-Force` or `Update-CodingModels.ps1` |
 | HF gated | Set `HF_TOKEN`, accept license on Hub |
-| No admin / policy blocks EXE | Document block; user must allow OllamaSetup or use IT whitelist |
+| Cursor missing | `.\scripts\Install-Cursor.ps1` (per-user; no admin) |
+| VM has no GPU in guest | Expose GPU from host first; `Install-GpuDrivers.ps1` explains this |
+| No admin / policy blocks EXE | Document block; user must allow OllamaSetup / CursorSetup or use IT whitelist |
 
 ## Source of truth
 
-- [README.md](../README.md) - first-time Cases A-M after clone
+- [README.md](../README.md) - first-time Cases A–O after clone
+- [FEATURES.md](../FEATURES.md) - shipped features + per-machine checklist
 - [AGENTS.md](../AGENTS.md) - how agents should behave in this repo
 - [powershell-ollama-setup.md](powershell-ollama-setup.md) - detailed install
 - Scripts under `../scripts/` - do not reinvent installers

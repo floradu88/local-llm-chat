@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Green / yellow / red dashboard for README Cases A-M (and related checks).
+  Green / yellow / red dashboard for README Cases A-O (and related checks).
 #>
 [CmdletBinding()]
 param()
@@ -16,7 +16,7 @@ function Write-Check {
   Write-Host ("[{0}] {1,-6} {2}" -f $Id, $Status, $Detail) -ForegroundColor $color
 }
 
-Write-Host "=== Show-SetupStatus (Cases A-M) ==="
+Write-Host "=== Show-SetupStatus (Cases A-O) ==="
 Write-Host "Repo: $RepoRoot"
 $ram = Get-SystemRamGB
 if ($ram) { Write-Host "RAM: ${ram} GB (Auto tier => $(Resolve-CodingModelTier -Tier Auto))" }
@@ -126,4 +126,4 @@ if (Test-Path (Join-Path $PSScriptRoot "Download-FromUrl.ps1")) {
 }
 
 Write-Host ""
-Write-Host "See FEATURES.md and README Cases A-M for next actions."
+Write-Host "See FEATURES.md and README Cases A-O for next actions."

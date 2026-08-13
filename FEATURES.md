@@ -10,16 +10,17 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] `OLLAMA_MODELS` / env helper (`Set-OllamaEnv.ps1`)
 - [x] Full local stack bootstrap (`Setup-FullLocalStack.ps1`)
 - [x] Codegraph index helper (`Initialize-Codegraph.ps1`)
-- [x] One-shot bootstrap (`Setup-Machine.ps1`)
+- [x] One-shot bootstrap (`Setup-Machine.ps1`) — env, Ollama, Cursor check/install, pulls, verify
 - [x] Tiered coding model pulls (`Pull-CodingModels.ps1`)
+- [x] Skip re-download when model/file already on disk (`Test-OllamaModelInstalled` / `Test-LocalFilePresent`; `-Force` to refresh)
 - [x] Three example coding models documented (Qwen2.5-Coder, DeepSeek-Coder-V2, CodeLlama)
 - [x] Ollama Library + `hf.co` download (`Download-FromOllama.ps1`)
 - [x] Hugging Face GGUF download (`Download-FromHuggingFace.ps1`)
 - [x] Direct URL download — ModelScope / GitHub (`Download-FromUrl.ps1`)
-- [x] GGUF → Ollama import (`Import-GGUF.ps1`)
+- [x] GGUF → Ollama import (`Import-GGUF.ps1`) — skips if name already exists unless `-Force`
 - [x] Coding Modelfile helper (`New-CoderModelfile.ps1`)
 - [x] Continue example + installer (`Install-ContinueConfig.ps1`) — three example models in config
-- [x] Cursor check + per-user install (`Install-Cursor.ps1`)
+- [x] Cursor check + per-user install (`Install-Cursor.ps1`; winget or official user-setup EXE)
 - [x] Cursor checklist (`config/cursor-openai-local.example.md`)
 - [x] Headroom → Ollama proxy (`Start-HeadroomOllama.ps1`)
 - [x] Codegraph docs (`docs/integrations.md`)
@@ -31,10 +32,10 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Verify script (`Test-LocalSetup.ps1`)
 - [x] Expanded `.gitignore` for weights/secrets
 - [x] RAM auto-detect tier (`-Tier Auto`)
-- [x] Setup status dashboard (`Show-SetupStatus.ps1`)
-- [x] Model refresh / update pulls (`Update-CodingModels.ps1`)
+- [x] Setup status dashboard (`Show-SetupStatus.ps1`) — includes Cursor + GPU-DRV rows
+- [x] Model refresh / update pulls (`Update-CodingModels.ps1` — always `-Force` re-pull)
 - [x] Uninstall / cleanup helper (`Uninstall-Ollama.ps1`)
-- [x] GPU support check non-admin + elevated (`Test-GpuSupport.ps1`)
+- [x] GPU support check non-admin + elevated (`Test-GpuSupport.ps1`) — includes VM / passthrough section
 - [x] Optional NVIDIA driver install + VM GPU guidance (`Install-GpuDrivers.ps1`)
 - [x] Elevated script launcher (`Invoke-Elevated.ps1`)
 - [x] Admin PowerShell examples doc (`docs/powershell-admin-examples.md`)
@@ -43,11 +44,13 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 ## Nice-to-haves — all done
 
 - [x] RAM → tier Auto (`Resolve-CodingModelTier` in `_common.ps1`)
-- [x] Cases A–N status dashboard (`Show-SetupStatus.ps1`)
+- [x] Cases A–O status dashboard (`Show-SetupStatus.ps1`)
 - [x] Refresh model pulls (`Update-CodingModels.ps1`)
+- [x] Skip existing Ollama tags / GGUF files on pull/download
 - [x] Uninstall / cleanup (`Uninstall-Ollama.ps1`)
 - [x] GPU usable with Ollama? (`Test-GpuSupport.ps1` + `-Elevated`)
 - [x] Optional GPU drivers / VM passthrough guidance (`Install-GpuDrivers.ps1`; `-InstallGpuDrivers` on setup)
+- [x] Cursor present? auto-install current user (`Install-Cursor.ps1`; `-SkipCursor` / `-ForceCursor` on setup)
 - [x] Elevate any script (`Invoke-Elevated.ps1`)
 - [x] Admin examples Patterns A/B/C (`docs/powershell-admin-examples.md`)
 - [x] Sample coding eval prompts
@@ -61,7 +64,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 Mark these on each machine after you run setup:
 
 - [ ] `(machine)` Ran `Setup-Machine.ps1` (or Cases A–C)
-- [ ] `(machine)` Pulled the three example models (or tier set)
+- [ ] `(machine)` Pulled the three example models (or tier set) — re-runs skip if already on disk
 - [ ] `(machine)` `OLLAMA_MODELS` points at preferred disk (Case D optional)
 - [ ] `(machine)` `Test-LocalSetup.ps1` / `Show-SetupStatus.ps1` green
 - [ ] `(machine)` VS Code Continue configured (Case H)
@@ -73,6 +76,7 @@ Mark these on each machine after you run setup:
 
 ```powershell
 .\scripts\Show-SetupStatus.ps1
+.\scripts\Install-Cursor.ps1 -CheckOnly
 .\scripts\Test-GpuSupport.ps1
 .\scripts\Install-GpuDrivers.ps1
 ```
@@ -83,12 +87,13 @@ Mark these on each machine after you run setup:
 - [ ] LM Studio as primary runtime (Ollama-first)
 - [ ] Bundle weights in git (never)
 - [ ] Admin Windows service / NSSM
-- [ ] Auto-write Cursor `settings.json`
+- [ ] Auto-write Cursor `settings.json` (Models UI still manual)
 - [ ] Native ModelScope SDK client (URL download is enough)
+- [ ] Hypervisor GPU passthrough setup (document only; host-side config is out of scope)
 
 ## How to use
 
-1. After clone: README Cases, or `.\scripts\Setup-Machine.ps1 -Tier Auto`
-2. Optional copy-paste of the three example models from README
+1. After clone: README Cases, or `.\scripts\Setup-Machine.ps1 -Tier Auto` (checks/installs Cursor unless `-SkipCursor`)
+2. Optional: `-InstallGpuDrivers` / three example models from README
 3. `.\scripts\Show-SetupStatus.ps1` until core rows are green
 4. Tick **Machine checklist** items on that PC

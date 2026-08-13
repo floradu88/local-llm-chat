@@ -26,7 +26,13 @@ Batch by RAM tier:
 
 ```powershell
 .\scripts\Pull-CodingModels.ps1 -Tier 16GB
+# Refresh / re-download even if present:
+.\scripts\Pull-CodingModels.ps1 -Tier 16GB -Force
+# or:
+.\scripts\Update-CodingModels.ps1 -Tier Auto
 ```
+
+**Skip if already on disk:** `Download-FromOllama.ps1` and `Pull-CodingModels.ps1` check Ollama manifests / API and print `Skip pull (already on disk)` instead of re-downloading. Pass `-Force` to pull again.
 
 ## Path B — Hugging Face → Ollama bridge
 
@@ -36,7 +42,7 @@ When a Hub repo publishes GGUF for Ollama:
 .\scripts\Download-FromOllama.ps1 -HuggingFaceRepo "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF" -Quant Q4_K_M
 ```
 
-Ollama pulls from `hf.co/...` and registers the tag locally. No separate Modelfile needed.
+Ollama pulls from `hf.co/...` and registers the tag locally. No separate Modelfile needed. Same skip/`-Force` behavior as Path A.
 
 ## Path C — Hugging Face GGUF file → local import
 
@@ -49,6 +55,7 @@ pip install --user "huggingface_hub[cli]"
 .\scripts\Download-FromHuggingFace.ps1 `
   -Repo "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF" `
   -Include "*Q4_K_M.gguf"
+# Re-download: add -Force
 ```
 
 Or pass a direct file URL / filename:
@@ -66,6 +73,8 @@ $env:HF_TOKEN = "hf_..."   # or -Token
 .\scripts\Download-FromHuggingFace.ps1 -Repo "meta-llama/..." -Include "*.gguf"
 ```
 
+If a matching `.gguf` is already under the out dir, the script **skips** (use `-Force` to fetch again).
+
 ### 2. Import into Ollama
 
 ```powershell
@@ -76,7 +85,7 @@ $env:HF_TOKEN = "hf_..."   # or -Token
   -Temperature 0.2
 ```
 
-This writes a Modelfile and runs `ollama create`.
+This writes a Modelfile and runs `ollama create`. If the Ollama name already exists, import is skipped unless you pass `-Force`.
 
 ### 3. Optional coding template
 
@@ -106,6 +115,7 @@ SYSTEM You are a careful coding assistant for the local-llm-chat repo. Prefer co
 .\scripts\Download-FromUrl.ps1 `
   -Url "https://example.com/path/model.Q4_K_M.gguf" `
   -OutDir ".\models\gguf\modelscope\my-model"
+# Skips if the destination file already exists; add -Force to re-download
 ```
 
 3. Import:

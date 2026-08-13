@@ -80,6 +80,14 @@ Tier helper (optional):
 .\scripts\Download-FromOllama.ps1 -Model qwen2.5-coder:7b
 ```
 
+Already-installed tags are **skipped** (prints `Skip pull (already on disk)`). To refresh:
+
+```powershell
+.\scripts\Update-CodingModels.ps1 -Tier Auto
+# or: .\scripts\Pull-CodingModels.ps1 -Tier Auto -Force
+# or: .\scripts\Download-FromOllama.ps1 -Model qwen2.5-coder:7b -Force
+```
+
 Useful commands:
 
 | Command | Purpose |
@@ -96,7 +104,7 @@ Useful commands:
 | RAM | Pulls |
 |-----|-------|
 | 8–12 GB | `qwen2.5-coder:3b`, `starcoder2:3b` |
-| 16 GB | `qwen2.5-coder:7b` |
+| 16 GB | `qwen2.5-coder:7b`, `starcoder2:3b` |
 | 32 GB+ | `qwen2.5-coder:14b`, `codellama:13b`, larger DeepSeek-Coder-V2 tags |
 
 ## 5. Coding-tuned local alias (optional)
@@ -132,7 +140,10 @@ Settings → Apps → Ollama → Uninstall. If you set `OLLAMA_MODELS`, remove t
 
 ## Next
 
-- Verify: `.\scripts\Test-LocalSetup.ps1`
+- Verify: `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1`
+- Cursor: `.\scripts\Install-Cursor.ps1`
+- GPU: `.\scripts\Test-GpuSupport.ps1` / `.\scripts\Install-GpuDrivers.ps1`
 - Import from Hugging Face / other sources: [install-models-from-web.md](install-models-from-web.md)
 - Trusted hosts: [trusted-sources.md](trusted-sources.md)
 - Editor + Headroom + Codegraph: [integrations.md](integrations.md)
+- Features checklist: [FEATURES.md](../FEATURES.md)

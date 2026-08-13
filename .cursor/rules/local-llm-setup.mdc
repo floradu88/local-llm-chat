@@ -10,6 +10,7 @@ This repository configures **local Ollama coding models** and integrations (VS C
 ## Required reading for setup tasks
 
 - `AGENTS.md`
+- `FEATURES.md`
 - `docs/agent-setup-playbook.md`
 
 ## Machine setup
@@ -17,10 +18,16 @@ This repository configures **local Ollama coding models** and integrations (VS C
 When asked to set up local models or this repo on a machine, run or guide:
 
 ```powershell
-.\scripts\Setup-Machine.ps1 -Tier 16GB
+.\scripts\Setup-Machine.ps1 -Tier Auto
 ```
 
-Use `-Tier 8GB` or `32GB` from the user's RAM. Prefer scripts in `scripts/` over ad-hoc commands. After setup, run `.\scripts\Test-LocalSetup.ps1` if needed. First-time flows are documented as Cases A-M in `README.md`.
+Use `-Tier 8GB`, `16GB`, or `32GB` from the user's RAM. Prefer scripts in `scripts/` over ad-hoc commands. After setup, run `.\scripts\Test-LocalSetup.ps1` and `.\scripts\Show-SetupStatus.ps1` if needed. First-time flows are documented as Cases A–O in `README.md`.
+
+Notable helpers:
+
+- `Install-Cursor.ps1` — check / per-user install (also run by Setup-Machine unless `-SkipCursor`)
+- `Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` — GPU + VM guidance
+- Pull/download scripts skip models already on disk unless `-Force` (or `Update-CodingModels.ps1`)
 
 ## Constraints
 

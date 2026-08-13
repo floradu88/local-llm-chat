@@ -182,13 +182,17 @@ Run several of these in `Start-Job` / `ForEach-Object -Parallel` (PowerShell 7+)
 
 ## RAM / GPU reminders
 
-- This project’s GPU check: `.\scripts\Test-GpuSupport.ps1`  
-- If verdict is CPU-only, prefer **sequential** workflows and **MaxParallel 1–2**  
-- Unload: `ollama stop <tag>`  
+- GPU / VM check: `.\scripts\Test-GpuSupport.ps1`
+- Optional drivers: `.\scripts\Install-GpuDrivers.ps1` (VM needs host passthrough first)
+- If verdict is CPU-only, prefer **sequential** workflows and **MaxParallel 1–2**
+- Unload: `ollama stop <tag>`
+- Model pulls skip tags already on disk; refresh with `Update-CodingModels.ps1` or `-Force`
 
 ## Related
 
-- Example pulls: README (three models)  
-- Continue multi-model config: `config/continue.config.example.json`  
-- Scripts: `Invoke-ParallelModels.ps1`, `Invoke-ModelWorkflow.ps1`  
+- Example pulls: README (three models)
+- Continue multi-model config: `config/continue.config.example.json`
+- Cursor install + Models checklist: `Install-Cursor.ps1`, `config/cursor-openai-local.example.md`
+- Scripts: `Invoke-ParallelModels.ps1`, `Invoke-ModelWorkflow.ps1`
+- Features: [FEATURES.md](../FEATURES.md)
 - Code map/understand prompts: [code-understanding-prompts.md](code-understanding-prompts.md)

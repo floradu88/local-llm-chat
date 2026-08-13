@@ -33,17 +33,13 @@ These are the three primary coding models used as examples in this repo (Ollama 
 
 ```powershell
 # Requires Ollama installed and running (Case A/B/C first)
-ollama pull qwen2.5-coder:7b
-ollama pull deepseek-coder-v2:16b
-ollama pull codellama:13b
-
-ollama list
-ollama run qwen2.5-coder:7b "Say ready"
-
-# Or via repo scripts:
+# Scripts skip tags already on disk (-Force to re-pull)
 .\scripts\Download-FromOllama.ps1 -Model qwen2.5-coder:7b
 .\scripts\Download-FromOllama.ps1 -Model deepseek-coder-v2:16b
 .\scripts\Download-FromOllama.ps1 -Model codellama:13b
+
+ollama list
+ollama run qwen2.5-coder:7b "Say ready"
 ```
 
 On low RAM / CPU-only machines, prefer smaller tags first (`qwen2.5-coder:3b`, `starcoder2:3b`) or `.\scripts\Pull-CodingModels.ps1 -Tier 8GB`.
@@ -69,7 +65,7 @@ No Ollama yet. Want coding models + later IDE wiring.
 # or: -Tier 16GB
 ```
 
-That sets `OLLAMA_MODELS` to `.\models\ollama`, installs Ollama (per-user, no admin), pulls models for your RAM tier (or the tier you pass), and prints editor next steps.
+That sets `OLLAMA_MODELS` to `.\models\ollama`, installs Ollama (per-user, no admin), checks/installs **Cursor** for the current user if missing, pulls models for your RAM tier (or the tier you pass) **skipping tags already on disk**, and prints editor next steps.
 
 **Other RAM tiers:**
 
@@ -340,10 +336,10 @@ Prompts to map/understand code faster: [docs/code-understanding-prompts.md](docs
 
 ### Suggested order for a brand-new clone
 
-1. **Case A** (or B if Ollama exists) — includes verify via `Test-LocalSetup`  
-2. **Case L** again if anything looked wrong  
-3. **Case H** and/or **Case I** (editor)  
-4. Optional: **Case J** (Headroom), **Case K** (Codegraph), **Case F/G/M** (extra models)
+1. **Case A** (or B if Ollama exists) — includes Cursor check/install + verify via `Test-LocalSetup`  
+2. **Case L** again if anything looked wrong (`Show-SetupStatus.ps1`)  
+3. **Case H** and/or **Case I** (editor Models wiring)  
+4. Optional: **Case N** (GPU), **Case J** (Headroom), **Case K** (Codegraph), **Case F/G/M** (extra models)
 
 Agents/LLMs in this repo: read [AGENTS.md](AGENTS.md), [FEATURES.md](FEATURES.md), and [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md). Cursor always loads [`.cursor/rules/local-llm-setup.mdc`](.cursor/rules/local-llm-setup.mdc).
 
@@ -360,8 +356,9 @@ Codegraph MCP ──────────────────────
 
 - Windows 10 **22H2+** (or Windows 11)
 - Enough disk for models (often 4–40+ GB each)
-- Optional GPU: NVIDIA (driver ≥ 551.61) or AMD (ROCm/Vulkan) — see [Ollama Windows docs](https://docs.ollama.com/windows)
+- Optional GPU: NVIDIA (driver ≥ 551.61) or AMD (ROCm/Vulkan) — see [Ollama Windows docs](https://docs.ollama.com/windows) and `Install-GpuDrivers.ps1`
 - PowerShell 5.1+ (Windows built-in is fine)
+- Optional: Cursor desktop (installed by `Install-Cursor.ps1` / `Setup-Machine.ps1` if missing)
 
 ## Best local coding models
 
@@ -384,8 +381,9 @@ Copy-paste pulls for the three primary examples are at the top of **First time a
 
 ```text
 AGENTS.md       instructions for local agents / LLMs
+FEATURES.md     shipped features + per-machine checklist
 docs/           setup playbook, trusted sources, imports, integrations
-scripts/        PowerShell install / download / import / Headroom / Setup-Machine
+scripts/        PowerShell install / download / import / Cursor / GPU / Headroom / Setup-Machine
 config/         Modelfile + Continue / Cursor examples
 models/gguf/    downloaded .gguf files (gitignored)
 models/ollama/  optional OLLAMA_MODELS root (gitignored)
@@ -410,30 +408,30 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 
 | Script | Role |
 |--------|------|
-| `scripts/Setup-FullLocalStack.ps1` | **Full scenario:** Ollama + models + Continue + codegraph init + verify |
+| `scripts/Setup-FullLocalStack.ps1` | **Full scenario:** Ollama + Cursor + models + Continue + codegraph init + verify |
 | `scripts/Initialize-Codegraph.ps1` | Index a project with `codegraph init` |
-| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + install + pull + verify (`-Tier Auto`) |
-| `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–M |
+| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + Ollama + Cursor check/install + pull + verify (`-Tier Auto`) |
+| `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–O (Cursor, GPU-DRV, …) |
 | `scripts/Invoke-ParallelModels.ps1` | Same prompt to multiple models concurrently |
 | `scripts/Invoke-ModelWorkflow.ps1` | DraftReview / PlanImplement / CompareJudge pipelines |
-| `scripts/Test-GpuSupport.ps1` | Non-admin GPU/Ollama check; `-Elevated` for admin UAC driver check |
+| `scripts/Test-GpuSupport.ps1` | Non-admin GPU/Ollama/VM check; `-Elevated` for admin UAC driver check |
 | `scripts/Test-GpuSupport.Elevated.ps1` | Admin-only helper (pnputil / driverquery / nvidia-smi) |
 | `scripts/Install-GpuDrivers.ps1` | Optional NVIDIA drivers + VM GPU guidance (`-Install` / `-OpenDownloadPage`) |
 | `scripts/Invoke-Elevated.ps1` | Generic `Start-Process -Verb RunAs` launcher for any script |
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
-| `scripts/Update-CodingModels.ps1` | Re-pull / refresh tier models |
+| `scripts/Update-CodingModels.ps1` | Force re-pull / refresh tier models |
 | `scripts/Uninstall-Ollama.ps1` | Uninstall guidance + optional model cleanup |
 | `scripts/Eval-CodingModel.ps1` | Run sample coding prompts against a local model |
 | `scripts/Set-OllamaEnv.ps1` | Set `OLLAMA_MODELS` / install dir |
 | `scripts/Install-Ollama.ps1` | Official per-user install |
 | `scripts/Install-ContinueConfig.ps1` | Copy Continue config for VS Code (Case H) |
 | `scripts/Install-Cursor.ps1` | Check Cursor; install per-user if missing (Case I) |
-| `scripts/Download-FromOllama.ps1` | `ollama pull` (+ optional `hf.co` bridge) |
-| `scripts/Download-FromHuggingFace.ps1` | Download GGUF to `models/gguf` |
-| `scripts/Download-FromUrl.ps1` | Direct URL (ModelScope / GitHub Releases) |
-| `scripts/Import-GGUF.ps1` | Register local GGUF with `ollama create` |
+| `scripts/Download-FromOllama.ps1` | `ollama pull` (+ `hf.co` bridge); skips if already on disk (`-Force` to re-pull) |
+| `scripts/Download-FromHuggingFace.ps1` | Download GGUF to `models/gguf` (skips existing; `-Force`) |
+| `scripts/Download-FromUrl.ps1` | Direct URL (ModelScope / GitHub Releases); skips existing file |
+| `scripts/Import-GGUF.ps1` | Register local GGUF with `ollama create` (skips existing name) |
 | `scripts/New-CoderModelfile.ps1` | Generate a coding-tuned Modelfile |
-| `scripts/Pull-CodingModels.ps1` | Opinionated pulls by RAM tier / Auto |
+| `scripts/Pull-CodingModels.ps1` | Opinionated pulls by RAM tier / Auto (skips installed tags) |
 | `scripts/Start-HeadroomOllama.ps1` | Headroom proxy → Ollama `/v1` |
 | `scripts/_common.ps1` | Shared helpers (dot-sourced; not run alone) |
 

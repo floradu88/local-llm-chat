@@ -66,10 +66,16 @@ driverquery /v | Select-String "NVIDIA|nvlddmkm|BasicDisplay|Indirect"
 ```powershell
 # Install / pull / verify — no admin
 .\scripts\Setup-Machine.ps1 -Tier Auto
+.\scripts\Install-Cursor.ps1
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Test-LocalSetup.ps1
 
-# Only elevate if you need the GPU admin block
+# GPU detect / optional drivers (Install may prompt UAC)
+.\scripts\Test-GpuSupport.ps1
+.\scripts\Install-GpuDrivers.ps1
+.\scripts\Install-GpuDrivers.ps1 -Install
+
+# Only elevate if you need the GPU admin diagnostics block
 .\scripts\Test-GpuSupport.ps1 -Elevated
 ```
 
@@ -78,3 +84,5 @@ driverquery /v | Select-String "NVIDIA|nvlddmkm|BasicDisplay|Indirect"
 - Approving UAC does **not** make an unsupported GPU (e.g. GT 650M / Kepler) work with Ollama.
 - Prefer **User** env vars (`Set-OllamaEnv.ps1 -Persistent`) over Machine-level changes.
 - If UAC is denied, the non-admin report is still valid for Ollama CPU vs GPU verdict.
+- VMs need a host-exposed NVIDIA device before guest driver install helps — see `Install-GpuDrivers.ps1`.
+- Cursor install is per-user and does not need elevation (`Install-Cursor.ps1`).

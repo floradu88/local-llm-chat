@@ -122,7 +122,10 @@ If Cursor already has the Codegraph MCP server configured, ensure `codegraph ini
 | Symptom | Check |
 |---------|--------|
 | Continue / Cursor cannot reach model | `Invoke-RestMethod http://localhost:11434/api/tags` |
+| Cursor not installed | `.\scripts\Install-Cursor.ps1` |
 | Wrong model name | Must match `ollama list` exactly |
+| Pull downloaded again | Scripts skip by default; unexpected re-pull → check tag / use manifests; intentional refresh → `-Force` |
 | Headroom 502 / empty | Ollama up; URL ends with `/v1` for OpenAI path |
 | Out of memory | Smaller tag/quant; `ollama stop <model>`; close other GPU apps |
+| GPU unused / VM | `.\scripts\Test-GpuSupport.ps1` and `.\scripts\Install-GpuDrivers.ps1` |
 | Codegraph empty | Run `codegraph init` in the project root |

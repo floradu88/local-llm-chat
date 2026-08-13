@@ -1,17 +1,26 @@
 # Cursor → local Ollama (checklist)
 
+## Install Cursor (if needed)
+
+Per-user install (no admin); skips when already present:
+
+```powershell
+.\scripts\Install-Cursor.ps1
+.\scripts\Install-Cursor.ps1 -CheckOnly
+```
+
 ## Example model tags (copy-paste)
 
-After pulling the three primary examples from README:
+After pulling the three primary examples from README (skips if already on disk):
 
 - `qwen2.5-coder:7b`
 - `deepseek-coder-v2:16b`
 - `codellama:13b`
 
 ```powershell
-ollama pull qwen2.5-coder:7b
-ollama pull deepseek-coder-v2:16b
-ollama pull codellama:13b
+.\scripts\Download-FromOllama.ps1 -Model qwen2.5-coder:7b
+.\scripts\Download-FromOllama.ps1 -Model deepseek-coder-v2:16b
+.\scripts\Download-FromOllama.ps1 -Model codellama:13b
 ollama list
 ```
 
