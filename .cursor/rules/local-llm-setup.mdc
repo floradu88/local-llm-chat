@@ -31,7 +31,7 @@ Use `-Tier 8GB`, `16GB`, or `32GB` from the user's RAM. Prefer scripts in `scrip
 Notable helpers:
 
 - `Install-Cursor.ps1` — check / per-user install (unless `-SkipCursor`)
-- `Install-CursorConfig.ps1` — find Cursor + write Models → Ollama into `state.vscdb` (**quit Cursor first**; unless `-SkipCursorConfig`)
+- `Install-CursorConfig.ps1` — find Cursor + write Models → Ollama into `state.vscdb`, disable cloud/catalog models (**quit Cursor first**; `-KeepRemoteModels` to keep remotes; unless `-SkipCursorConfig`)
 - `Install-ContinueConfig.ps1` / `Install-VSCodeConfig.ps1` — find VS Code (`Code.exe`), install Continue extension, write `~\.continue\config.json` (unless `-SkipContinueConfig`)
 - `Install-Codegraph.ps1` — fnm + Node (no admin) → npm Codegraph → `--no-permissions` then permissions → `codegraph init` if needed
 - `Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` — GPU + VM guidance
@@ -42,4 +42,4 @@ Notable helpers:
 - Do not commit `.gguf`, `models/**` blobs, or API/HF tokens.
 - Only download models from sources in `docs/trusted-sources.md`.
 - Ollama is the primary runtime; do not switch the stack to LM Studio unless asked.
-- After setup, verify `ollama list` and `http://localhost:11434/api/tags`. Confirm editor rows in `Show-SetupStatus.ps1` (H/H-cfg, I/I-cfg). Re-run `Install-ContinueConfig.ps1` or `Install-CursorConfig.ps1` if needed (see `docs/integrations.md`).
+- After setup, verify `ollama list` and `http://localhost:11434/api/tags`. Confirm editor rows in `Show-SetupStatus.ps1` (H/H-cfg, I/I-cfg). Run `.\scripts\Test-CursorOllama.ps1` for Cursor config + chat smoke. Re-run `Install-ContinueConfig.ps1` or `Install-CursorConfig.ps1` if needed (see `docs/integrations.md`).

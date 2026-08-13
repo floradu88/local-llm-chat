@@ -105,10 +105,11 @@ Reload VS Code and select an Ollama model in Continue.
 .\scripts\Install-Cursor.ps1          # installs for current user if missing
 # Quit Cursor, then:
 .\scripts\Install-CursorConfig.ps1    # wires Models → Ollama (state.vscdb)
+.\scripts\Test-CursorOllama.ps1       # config + /v1/chat/completions smoke
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
 ```
 
-Checklist: `config\cursor-openai-local.example.md`. Manual Models UI still works as a fallback (base URL `http://localhost:11434/v1`, key `ollama`).
+Checklist: `config\cursor-openai-local.example.md`. By default cloud/catalog models are disabled; pass `-KeepRemoteModels` to keep them. Manual Models UI still works as a fallback (base URL `http://localhost:11434/v1`, key `ollama`).
 
 ## Step 4 — optional GPU
 
@@ -178,7 +179,7 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 | Pull skipped unexpectedly | Confirm tag in `ollama list` / manifests; use `-Force` or `Update-CodingModels.ps1` |
 | HF gated | Set `HF_TOKEN`, accept license on Hub |
 | Cursor missing | `.\scripts\Install-Cursor.ps1` (per-user; no admin) |
-| Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` |
+| Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
 | VS Code / Continue not wired | `.\scripts\Install-ContinueConfig.ps1` (finds Code.exe) |
 | Codegraph missing | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
 | VM has no GPU in guest | Expose GPU from host first; `Install-GpuDrivers.ps1` explains this |

@@ -197,10 +197,11 @@ Reload VS Code, open Continue, pick an Ollama model. Details: [docs/integrations
 # Quit Cursor first, then:
 .\scripts\Install-CursorConfig.ps1
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
+.\scripts\Test-CursorOllama.ps1          # config + /v1/chat/completions smoke
 # .\scripts\Install-CursorConfig.ps1 -Headroom   # after Start-HeadroomOllama.ps1
 ```
 
-That sets base URL `http://localhost:11434/v1`, API key `ollama`, and enables tags from `ollama list`. Restart Cursor afterward.
+That sets base URL `http://localhost:11434/v1`, API key `ollama`, enables tags from `ollama list`, and **disables Cursor cloud/catalog models** (use `-KeepRemoteModels` to leave them on). Restart Cursor afterward.
 
 Manual UI fallback: Settings → Models with the same URL/key. Checklist: [config/cursor-openai-local.example.md](config/cursor-openai-local.example.md).
 
@@ -257,6 +258,7 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Install-ContinueConfig.ps1 -CheckOnly
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
+.\scripts\Test-CursorOllama.ps1
 # optional: .\scripts\Test-LocalSetup.ps1 -Model qwen2.5-coder:7b
 ```
 
@@ -268,7 +270,7 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 | Pull too large / OOM | Re-run with `-Tier 8GB` or Case E |
 | Execution / SmartScreen blocks installer | Allow `OllamaSetup.exe` or ask IT to whitelist |
 | H-cfg red (Continue) | `.\scripts\Install-ContinueConfig.ps1 -Force` |
-| I-cfg red (Cursor Models) | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` |
+| I-cfg red (Cursor Models) | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
 | K / K-cli red (Codegraph) | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
 
 ---
@@ -461,6 +463,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Install-GpuDrivers.ps1` | Optional NVIDIA drivers + VM GPU guidance (`-Install` / `-OpenDownloadPage`) |
 | `scripts/Invoke-Elevated.ps1` | Generic `Start-Process -Verb RunAs` launcher for any script |
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
+| `scripts/Test-CursorOllama.ps1` | Verify Cursor Models config + OpenAI `/v1/chat/completions` smoke |
 | `scripts/Update-CodingModels.ps1` | Force re-pull / refresh tier models |
 | `scripts/Uninstall-Ollama.ps1` | Uninstall guidance + optional model cleanup |
 | `scripts/Eval-CodingModel.ps1` | Run sample coding prompts against a local model |
@@ -469,7 +472,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Install-ContinueConfig.ps1` | Find VS Code + wire Continue → Ollama (Case H); alias `Install-VSCodeConfig.ps1` |
 | `scripts/Install-VSCodeConfig.ps1` | Alias for Install-ContinueConfig.ps1 |
 | `scripts/Install-Cursor.ps1` | Check Cursor; install per-user if missing (Case I) |
-| `scripts/Install-CursorConfig.ps1` | Find Cursor + wire Models → local Ollama (`state.vscdb`) |
+| `scripts/Install-CursorConfig.ps1` | Find Cursor + wire Models → local Ollama; disable cloud models (`-KeepRemoteModels` to opt out) |
 | `scripts/Download-FromOllama.ps1` | `ollama pull` (+ `hf.co` bridge); skips if already on disk (`-Force` to re-pull) |
 | `scripts/Download-FromHuggingFace.ps1` | Download GGUF to `models/gguf` (skips existing; `-Force`) |
 | `scripts/Download-FromUrl.ps1` | Direct URL (ModelScope / GitHub Releases); skips existing file |

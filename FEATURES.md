@@ -21,7 +21,8 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Coding Modelfile helper (`New-CoderModelfile.ps1`)
 - [x] Continue / VS Code Ollama config (`Install-ContinueConfig.ps1` / `Install-VSCodeConfig.ps1`) — finds Code.exe, installs Continue, writes models from `ollama list`
 - [x] Cursor check + per-user install (`Install-Cursor.ps1`; winget or official user-setup EXE)
-- [x] Cursor → Ollama Models config from PowerShell (`Install-CursorConfig.ps1`; finds install + writes `state.vscdb`)
+- [x] Cursor → Ollama Models config from PowerShell (`Install-CursorConfig.ps1`; finds install + writes `state.vscdb`; disables cloud/catalog models unless `-KeepRemoteModels`)
+- [x] Cursor → Ollama integration test (`Test-CursorOllama.ps1`; config + `/v1/chat/completions` smoke)
 - [x] Cursor checklist (`config/cursor-openai-local.example.md`)
 - [x] Headroom → Ollama proxy (`Start-HeadroomOllama.ps1`)
 - [x] Codegraph install + init (`Install-Codegraph.ps1` — fnm/Node no-admin, `--no-permissions` then permissions, then `codegraph init`; `Initialize-Codegraph.ps1`)
@@ -72,7 +73,7 @@ Mark these on each machine after you run setup:
 - [ ] `(machine)` `OLLAMA_MODELS` points at preferred disk (Case D optional)
 - [ ] `(machine)` `Test-LocalSetup.ps1` / `Show-SetupStatus.ps1` green
 - [ ] `(machine)` VS Code Continue configured (`Install-ContinueConfig.ps1 -CheckOnly` / Case H)
-- [ ] `(machine)` Cursor installed (`Install-Cursor.ps1 -CheckOnly`) + Models → Ollama (`Install-CursorConfig.ps1 -CheckOnly`; Case I)
+- [ ] `(machine)` Cursor installed (`Install-Cursor.ps1 -CheckOnly`) + Models → Ollama (`Test-CursorOllama.ps1`; Case I)
 - [ ] `(machine)` Headroom installed if desired (Case J)
 - [ ] `(machine)` Codegraph CLI + index (`Install-Codegraph.ps1 -CheckOnly -ProjectPath <repo>`; Case K)
 - [ ] `(machine)` GPU check run (`Test-GpuSupport.ps1`; `-Elevated` optional)
@@ -81,7 +82,7 @@ Mark these on each machine after you run setup:
 ```powershell
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Install-Cursor.ps1 -CheckOnly
-.\scripts\Install-CursorConfig.ps1 -CheckOnly
+.\scripts\Test-CursorOllama.ps1
 .\scripts\Install-ContinueConfig.ps1 -CheckOnly
 .\scripts\Install-Codegraph.ps1 -CheckOnly
 .\scripts\Test-GpuSupport.ps1

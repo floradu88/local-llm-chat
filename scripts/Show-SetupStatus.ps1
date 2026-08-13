@@ -85,11 +85,12 @@ if ($cursorInfo.Installed) {
   Write-Check "I" "OK" ("Cursor installed ({0}): {1}" -f $cursorInfo.Scope, $(if ($cursorInfo.ExePath) { $cursorInfo.ExePath } else { $cursorInfo.CmdPath }))
   $cfg = Get-CursorOllamaConfigStatus
   if ($cfg.Configured) {
-    Write-Check "I-cfg" "OK" ("Models → {0} (key={1})" -f $cfg.OpenAIBaseUrl, $(if ($cfg.ApiKeyPresent) { "set" } else { "missing" }))
+    $remoteNote = if ($cfg.RemoteModelsDisabled) { "remote off" } else { "remote still on - re-run Install-CursorConfig.ps1" }
+    Write-Check "I-cfg" "OK" ("Models → {0} (key={1}; {2})" -f $cfg.OpenAIBaseUrl, $(if ($cfg.ApiKeyPresent) { "set" } else { "missing" }), $remoteNote)
   } elseif ($cfg.Ok -eq $false -and $cfg.Message -match "state.vscdb missing|Launch Cursor") {
     Write-Check "I-cfg" "WARN" $cfg.Message
   } else {
-    Write-Check "I-cfg" "WARN" "run .\scripts\Install-CursorConfig.ps1 (quit Cursor first)"
+    Write-Check "I-cfg" "WARN" "run .\scripts\Install-CursorConfig.ps1 then .\scripts\Test-CursorOllama.ps1 (quit Cursor first)"
   }
 } else {
   Write-Check "I" "FAIL" "Cursor missing - run .\scripts\Install-Cursor.ps1"
@@ -135,6 +136,12 @@ if (Test-Path $testScript) {
   Write-Check "L" "OK" "Test-LocalSetup.ps1 available"
 } else {
   Write-Check "L" "FAIL" "Test-LocalSetup.ps1 missing"
+}
+$cursorTest = Join-Path $PSScriptRoot "Test-CursorOllama.ps1"
+if (Test-Path $cursorTest) {
+  Write-Check "L-cursor" "OK" "Test-CursorOllama.ps1 available (run for Models + chat smoke)"
+} else {
+  Write-Check "L-cursor" "FAIL" "Test-CursorOllama.ps1 missing"
 }
 
 # M URL downloader

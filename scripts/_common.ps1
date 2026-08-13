@@ -424,16 +424,19 @@ function Get-CursorOllamaConfigStatus {
 
   $json = $text | ConvertFrom-Json
   return [pscustomobject]@{
-    Ok                   = [bool]$json.ok
-    Installed            = $true
-    Configured           = [bool]$json.configuredForOllama
-    OpenAIBaseUrl        = $json.openAIBaseUrl
-    UseOpenAIKey         = [bool]$json.useOpenAIKey
-    ApiKeyPresent        = [bool]$json.apiKeyPresent
-    ModelOverrideEnabled = @($json.modelOverrideEnabled)
-    Message              = if ($json.configuredForOllama) { "Cursor wired to local OpenAI-compatible endpoint" } else { "Cursor not yet configured for Ollama" }
-    InstallInfo          = $info
-    Raw                  = $json
+    Ok                     = [bool]$json.ok
+    Installed              = $true
+    Configured             = [bool]$json.configuredForOllama
+    OpenAIBaseUrl          = $json.openAIBaseUrl
+    UseOpenAIKey           = [bool]$json.useOpenAIKey
+    ApiKeyPresent          = [bool]$json.apiKeyPresent
+    ModelOverrideEnabled   = @($json.modelOverrideEnabled)
+    ModelOverrideDisabledCount = $(if ($null -ne $json.modelOverrideDisabledCount) { [int]$json.modelOverrideDisabledCount } else { 0 })
+    CatalogDisabledCount   = $(if ($null -ne $json.catalogDisabledCount) { [int]$json.catalogDisabledCount } else { 0 })
+    RemoteModelsDisabled   = [bool]$json.remoteModelsDisabled
+    Message                = if ($json.configuredForOllama) { "Cursor wired to local OpenAI-compatible endpoint" } else { "Cursor not yet configured for Ollama" }
+    InstallInfo            = $info
+    Raw                    = $json
   }
 }
 

@@ -18,6 +18,8 @@ Quit Cursor, then:
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
 # Via Headroom proxy:
 # .\scripts\Install-CursorConfig.ps1 -Headroom
+# Keep Cursor cloud models enabled (opt out of local-only):
+# .\scripts\Install-CursorConfig.ps1 -KeepRemoteModels
 ```
 
 The script finds Cursor under `%LOCALAPPDATA%\Programs\Cursor` (or Program Files), writes `%APPDATA%\Cursor\User\globalStorage\state.vscdb`:
@@ -27,8 +29,9 @@ The script finds Cursor under `%LOCALAPPDATA%\Programs\Cursor` (or Program Files
 | Override OpenAI Base URL | `http://localhost:11434/v1` |
 | OpenAI API key | `ollama` (any non-empty string) |
 | Enabled models | tags from `ollama list` (or README examples) |
+| Cloud / catalog models | **disabled by default** (toggle off in Models UI) |
 
-Restart Cursor afterward. Optional: `-SetAsDefault` (also used by `Setup-Machine.ps1`) selects the first tag for Composer/Cmd-K.
+Restart Cursor afterward. Defaults Composer/Cmd-K to the first local tag when remotes are disabled. Optional: `-SetAsDefault` / `-KeepRemoteModels`.
 
 ## Example model tags (copy-paste)
 
@@ -43,7 +46,7 @@ After pulling the three primary examples from README (skips if already on disk):
 .\scripts\Download-FromOllama.ps1 -Model deepseek-coder-v2:16b
 .\scripts\Download-FromOllama.ps1 -Model codellama:13b
 ollama list
-.\scripts\Install-CursorConfig.ps1 -Models qwen2.5-coder:7b,deepseek-coder-v2:16b,codellama:13b -SetAsDefault
+.\scripts\Install-CursorConfig.ps1 -Models qwen2.5-coder:7b,deepseek-coder-v2:16b,codellama:13b
 ```
 
 ## Manual UI (if script skipped)
@@ -53,6 +56,7 @@ ollama list
    - Base URL: `http://localhost:11434/v1`
    - API key: `ollama`
 3. Model name must match `ollama list` exactly (use one of the three tags above).
+4. Turn **off** cloud/catalog models you do not want; keep only local tags on.
 
 ## Via Headroom
 
@@ -67,4 +71,7 @@ ollama list
 ollama list
 Invoke-RestMethod http://localhost:11434/api/tags
 .\scripts\Show-SetupStatus.ps1
+.\scripts\Test-CursorOllama.ps1
 ```
+
+`Test-CursorOllama.ps1` checks Models wiring (including remote models disabled) and smokes `POST …/v1/chat/completions` the same way Cursor does.

@@ -7,7 +7,8 @@
     - openAIBaseUrl  (default http://localhost:11434/v1)
     - useOpenAIKey   = true
     - cursorAuth/openAIKey (placeholder "ollama"; Ollama ignores it)
-    - aiSettings.modelOverrideEnabled += installed Ollama tags
+    - aiSettings.modelOverrideEnabled = installed Ollama tags
+    - disables Cursor cloud/catalog models (unless -KeepRemoteModels)
 
   Updates Cursor's state.vscdb via the bundled Node helper (node:sqlite).
   Quit Cursor before applying (or pass -Force while it is running — may be overwritten).
@@ -27,6 +28,10 @@
 
 .PARAMETER SetAsDefault
   Set Composer / Cmd-K / plan / quick-agent selection to the first model.
+  (Implied when remote models are disabled.)
+
+.PARAMETER KeepRemoteModels
+  Do not disable Cursor cloud/catalog models; only enable local Ollama tags.
 
 .PARAMETER Force
   Replace a non-Ollama existing openAIBaseUrl; allow apply while Cursor is running.
@@ -44,6 +49,7 @@ param(
   [string[]] $Models = @(),
   [switch] $Headroom,
   [switch] $SetAsDefault,
+  [switch] $KeepRemoteModels,
   [switch] $Force,
   [switch] $CheckOnly,
   [switch] $SkipApiKey
@@ -60,6 +66,8 @@ function Write-Section([string] $Title) {
 if ($Headroom) {
   $BaseUrl = "http://127.0.0.1:8787/v1"
 }
+
+$disableRemote = -not $KeepRemoteModels
 
 $info = Get-CursorInstallInfo
 Write-Section "Cursor install"
@@ -85,6 +93,10 @@ Write-Host ("  Key stored: {0}" -f $status.ApiKeyPresent)
 if ($status.ModelOverrideEnabled.Count -gt 0) {
   Write-Host ("  Enabled:    {0}" -f ($status.ModelOverrideEnabled -join ", "))
 }
+Write-Host ("  Remote off: {0}" -f $(if ($null -ne $status.RemoteModelsDisabled) { $status.RemoteModelsDisabled } else { "(unknown)" }))
+if ($status.CatalogDisabledCount) {
+  Write-Host ("  Catalog disabled: {0}" -f $status.CatalogDisabledCount)
+}
 if (-not $status.Ok -and $status.Message) {
   Write-Host ("  Note:       {0}" -f $status.Message)
 }
@@ -92,6 +104,7 @@ if (-not $status.Ok -and $status.Message) {
 if ($CheckOnly) {
   if ($status.Configured) {
     Write-Host "  CheckOnly: Ollama/OpenAI override looks configured"
+    Write-Host "  Deeper check: .\scripts\Test-CursorOllama.ps1"
     exit 0
   }
   Write-Host "  CheckOnly: not configured - re-run without -CheckOnly"
@@ -133,6 +146,7 @@ Write-Section "Apply"
 Write-Host ("  Target URL: {0}" -f $BaseUrl)
 Write-Host ("  API key:    {0}" -f $(if ($SkipApiKey) { "(skipped)" } else { $ApiKey }))
 Write-Host ("  Models:     {0}" -f ($modelList -join ", "))
+Write-Host ("  Remote:     {0}" -f $(if ($disableRemote) { "disable cloud/catalog models" } else { "keep remote models (-KeepRemoteModels)" }))
 
 $helper = Join-Path $PSScriptRoot "_Set-CursorOllamaState.cjs"
 $backupDir = Join-Path $info.UserDataPath "User\globalStorage\local-llm-chat-backups"
@@ -149,6 +163,7 @@ $argList = @(
 )
 if ($SetAsDefault) { $argList += "--set-default" }
 if ($Force) { $argList += "--force" }
+if ($disableRemote) { $argList += "--disable-remote" }
 
 $prevEa = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
@@ -178,6 +193,9 @@ if (-not $result.ok) {
 
 Write-Host "  Wrote openAIBaseUrl + useOpenAIKey (+ API key unless skipped)"
 Write-Host ("  Enabled models: {0}" -f ($result.modelOverrideEnabled -join ", "))
+if ($result.remoteModelsDisabled) {
+  Write-Host ("  Remote models:  disabled ({0} catalog entries)" -f $result.remoteDisabledCount)
+}
 if ($result.setDefault) {
   Write-Host ("  Default model:  {0}" -f $result.setDefault)
 }
@@ -187,6 +205,8 @@ Write-Section "Done"
 Write-Host "Restart Cursor, then open Settings > Models and confirm:"
 Write-Host ("  Base URL: {0}" -f $BaseUrl)
 Write-Host ("  API key:  {0}" -f $(if ($SkipApiKey) { "(unchanged)" } else { $ApiKey }))
-Write-Host "  Pick an enabled Ollama tag in the model picker."
+Write-Host "  Only local Ollama tags should be enabled (cloud models toggled off)."
+Write-Host "Verify integration:"
+Write-Host "  .\scripts\Test-CursorOllama.ps1"
 Write-Host "Verify Ollama: Invoke-RestMethod http://localhost:11434/api/tags"
 exit 0

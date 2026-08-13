@@ -32,9 +32,9 @@ cd <repo-root>
 2. `.\scripts\Install-Ollama.ps1`
 3. `.\scripts\Install-Cursor.ps1` (skips if already installed; per-user)
 4. `.\scripts\Pull-CodingModels.ps1 -Tier <8GB|16GB|32GB|Auto>` (skips tags already on disk; `-Force` to re-pull)
-5. Wire **Cursor** → Ollama: quit Cursor if open, then `.\scripts\Install-CursorConfig.ps1` (finds install + writes Models into `state.vscdb`)
+5. Wire **Cursor** → Ollama: quit Cursor if open, then `.\scripts\Install-CursorConfig.ps1` (finds install + writes Models into `state.vscdb`; disables cloud/catalog models by default; `-KeepRemoteModels` to keep them)
 6. Wire **VS Code** → Ollama: `.\scripts\Install-ContinueConfig.ps1` (alias `Install-VSCodeConfig.ps1` — finds Code.exe, installs Continue extension, writes `~\.continue\config.json`)
-7. `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1`
+7. `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1` / `.\scripts\Test-CursorOllama.ps1`
 8. Optional: `.\scripts\Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` (VM needs host GPU passthrough first)
 9. Optional: `.\scripts\Start-HeadroomOllama.ps1` then `Install-CursorConfig.ps1 -Headroom` and/or `Install-ContinueConfig.ps1 -Headroom -Force`
 10. Optional: `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (fnm → npm → `--no-permissions` then permissions → `codegraph init` if needed)
@@ -57,7 +57,7 @@ Do not fetch models from random Drive/Telegram/unsigned mirrors.
 ## When the user asks to “set up local models”
 
 - Run or guide `Setup-Machine.ps1` with an appropriate `-Tier` from their RAM.
-- Verify with `.\scripts\Test-LocalSetup.ps1` and `.\scripts\Show-SetupStatus.ps1` (Cases H/H-cfg and I/I-cfg should go green).
+- Verify with `.\scripts\Test-LocalSetup.ps1`, `.\scripts\Show-SetupStatus.ps1`, and `.\scripts\Test-CursorOllama.ps1` (Cases H/H-cfg and I/I-cfg should go green).
 - Cursor: `Install-Cursor.ps1` then quit Cursor and `Install-CursorConfig.ps1`.
 - VS Code: `Install-ContinueConfig.ps1` (or `Install-VSCodeConfig.ps1`) — finds Code.exe and wires Continue.
 - Point them at [docs/integrations.md](docs/integrations.md) and `config/cursor-openai-local.example.md`.

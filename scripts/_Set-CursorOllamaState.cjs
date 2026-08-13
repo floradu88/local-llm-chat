@@ -5,7 +5,7 @@
  *
  * Usage:
  *   node _Set-CursorOllamaState.cjs status --db <path>
- *   node _Set-CursorOllamaState.cjs apply --db <path> --base-url <url> --api-key <key> --models <csv> [--set-default] [--force]
+ *   node _Set-CursorOllamaState.cjs apply --db <path> --base-url <url> --api-key <key> --models <csv> [--set-default] [--force] [--disable-remote]
  */
 "use strict";
 
@@ -91,10 +91,86 @@ function ensureAiSettings(data) {
   if (!Array.isArray(data.aiSettings.modelOverrideDisabled)) {
     data.aiSettings.modelOverrideDisabled = [];
   }
+  if (!Array.isArray(data.aiSettings.userAddedModels)) {
+    data.aiSettings.userAddedModels = [];
+  }
   if (!data.aiSettings.modelConfig || typeof data.aiSettings.modelConfig !== "object") {
     data.aiSettings.modelConfig = {};
   }
   return data.aiSettings;
+}
+
+function catalogModelNames(data) {
+  const names = new Set();
+  const catalog = Array.isArray(data.availableDefaultModels2) ? data.availableDefaultModels2 : [];
+  for (const m of catalog) {
+    if (m && m.name) names.add(String(m.name));
+  }
+  // Common cloud / routed ids even if catalog not loaded yet
+  for (const extra of [
+    "default",
+    "composer-2",
+    "composer-2-fast",
+    "composer-2.5",
+    "gpt-5",
+    "gpt-5.1",
+    "gpt-5.2",
+    "gpt-5.3-codex",
+    "gpt-5.4",
+    "gpt-5.5",
+    "gpt-5.6-sol",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "claude-4-sonnet",
+    "claude-4.5-sonnet",
+    "claude-4.6-sonnet",
+    "claude-opus-4",
+    "claude-opus-4.5",
+    "claude-opus-4.6",
+    "claude-opus-5",
+    "claude-sonnet-4",
+    "claude-sonnet-4-5",
+    "claude-sonnet-4-6",
+    "grok-4.5",
+    "grok-4.6",
+    "gemini-2.5-pro",
+    "gemini-3.1-pro",
+    "gemini-3.6-flash",
+  ]) {
+    names.add(extra);
+  }
+  return names;
+}
+
+function disableRemoteModels(data, localModels) {
+  const ai = ensureAiSettings(data);
+  const local = new Set(localModels.map(String));
+  const catalog = catalogModelNames(data);
+
+  // Enable only local Ollama tags (custom / user-added)
+  ai.modelOverrideEnabled = Array.from(local);
+  ai.userAddedModels = Array.from(local);
+
+  // Disable every catalog / cloud model not in the local set
+  const disabled = new Set();
+  for (const name of catalog) {
+    if (!local.has(name)) disabled.add(name);
+  }
+  // Keep previously disabled items that are still not local
+  for (const name of ai.modelOverrideDisabled || []) {
+    if (!local.has(String(name))) disabled.add(String(name));
+  }
+  ai.modelOverrideDisabled = Array.from(disabled);
+
+  // BYOK / OpenAI-override model list + local provider ids
+  data.availableAPIKeyModels = Array.from(local);
+  data.localProviderModelIds = Array.from(local);
+  data.localProviderAgentModelIds = Array.from(local);
+
+  return {
+    enabled: ai.modelOverrideEnabled,
+    disabledCount: ai.modelOverrideDisabled.length,
+  };
 }
 
 function status(dbPath) {
@@ -103,6 +179,11 @@ function status(dbPath) {
     const data = readAppUser(db);
     const base = data.openAIBaseUrl == null ? null : normalizeBaseUrl(data.openAIBaseUrl);
     const enabled = (data.aiSettings && data.aiSettings.modelOverrideEnabled) || [];
+    const disabled = (data.aiSettings && data.aiSettings.modelOverrideDisabled) || [];
+    const catalog = catalogModelNames(data);
+    // A catalog model is "remote still on" if it is not in modelOverrideDisabled
+    // (defaultOn models show unless disabled). Count disabled intersection with catalog.
+    const catalogDisabled = [...catalog].filter((n) => disabled.includes(n));
     const result = {
       ok: true,
       dbPath,
@@ -110,6 +191,9 @@ function status(dbPath) {
       useOpenAIKey: !!data.useOpenAIKey,
       apiKeyPresent: readOpenAIKeyPresent(db),
       modelOverrideEnabled: enabled,
+      modelOverrideDisabledCount: disabled.length,
+      catalogDisabledCount: catalogDisabled.length,
+      remoteModelsDisabled: catalogDisabled.length >= Math.max(5, Math.floor(catalog.size * 0.5)),
       configuredForOllama:
         !!data.useOpenAIKey &&
         !!base &&
@@ -131,6 +215,7 @@ function apply(args) {
     : [];
   const setDefault = !!args["set-default"];
   const force = !!args["force"];
+  const disableRemote = !!args["disable-remote"];
   const backupDir = args["backup-dir"] || null;
 
   if (!dbPath) throw new Error("--db required");
@@ -169,20 +254,30 @@ function apply(args) {
     data.useOpenAIKey = true;
 
     const ai = ensureAiSettings(data);
-    const enabled = new Set(ai.modelOverrideEnabled.map(String));
-    for (const m of models) enabled.add(m);
-    // Keep disabled list from blocking our models
-    ai.modelOverrideDisabled = (ai.modelOverrideDisabled || []).filter((m) => !enabled.has(String(m)));
-    ai.modelOverrideEnabled = Array.from(enabled);
+    let remoteInfo = null;
 
-    if (setDefault && models.length > 0) {
+    if (disableRemote) {
+      remoteInfo = disableRemoteModels(data, models);
+    } else {
+      const enabled = new Set(ai.modelOverrideEnabled.map(String));
+      for (const m of models) enabled.add(m);
+      ai.modelOverrideDisabled = (ai.modelOverrideDisabled || []).filter((m) => !enabled.has(String(m)));
+      ai.modelOverrideEnabled = Array.from(enabled);
+      const added = new Set((ai.userAddedModels || []).map(String));
+      for (const m of models) added.add(m);
+      ai.userAddedModels = Array.from(added);
+    }
+
+    // Prefer local default whenever we disable remote, or when asked
+    if ((setDefault || disableRemote) && models.length > 0) {
       const primary = models[0];
-      const slots = ["composer", "cmd-k", "plan-execution", "quick-agent"];
+      const slots = ["composer", "cmd-k", "plan-execution", "quick-agent", "background-composer", "spec", "deep-search"];
       for (const slot of slots) {
         const cur = ai.modelConfig[slot] && typeof ai.modelConfig[slot] === "object" ? ai.modelConfig[slot] : {};
         ai.modelConfig[slot] = {
           ...cur,
           modelName: primary,
+          maxMode: false,
           selectedModels: [{ modelId: primary, parameters: [] }],
         };
       }
@@ -201,7 +296,9 @@ function apply(args) {
       apiKeyWritten: !!apiKey,
       modelsEnabled: models,
       modelOverrideEnabled: ai.modelOverrideEnabled,
-      setDefault: setDefault && models.length > 0 ? models[0] : null,
+      remoteModelsDisabled: !!disableRemote,
+      remoteDisabledCount: remoteInfo ? remoteInfo.disabledCount : null,
+      setDefault: (setDefault || disableRemote) && models.length > 0 ? models[0] : null,
     };
     process.stdout.write(JSON.stringify(result, null, 2) + "\n");
   } catch (e) {

@@ -46,7 +46,13 @@ Quit Cursor, then:
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
 ```
 
-The script locates Cursor under `%LOCALAPPDATA%\Programs\Cursor` (or Program Files) and writes Models settings into `%APPDATA%\Cursor\User\globalStorage\state.vscdb` (base URL `http://localhost:11434/v1`, key `ollama`, enabled Ollama tags). Restart Cursor afterward.
+The script locates Cursor under `%LOCALAPPDATA%\Programs\Cursor` (or Program Files) and writes Models settings into `%APPDATA%\Cursor\User\globalStorage\state.vscdb` (base URL `http://localhost:11434/v1`, key `ollama`, enabled Ollama tags, **cloud/catalog models disabled**). Use `-KeepRemoteModels` to leave Cursor cloud models enabled. Restart Cursor afterward.
+
+Verify:
+
+```powershell
+.\scripts\Test-CursorOllama.ps1
+```
 
 ### Manual UI
 
@@ -167,7 +173,7 @@ Restart Cursor after `codegraph install` so MCP reloads. Ensure `codegraph init`
 | Continue / Cursor cannot reach model | `Invoke-RestMethod http://localhost:11434/api/tags` |
 | VS Code / Continue not wired | `.\scripts\Install-ContinueConfig.ps1` (alias `Install-VSCodeConfig.ps1`) |
 | Cursor not installed | `.\scripts\Install-Cursor.ps1` |
-| Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` |
+| Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
 | Wrong model name | Must match `ollama list` exactly |
 | Pull downloaded again | Scripts skip by default; unexpected re-pull → check tag / use manifests; intentional refresh → `-Force` |
 | Headroom 502 / empty | Ollama up; URL ends with `/v1` for OpenAI path |
