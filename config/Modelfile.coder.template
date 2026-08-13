@@ -1,0 +1,5 @@
+FROM {{FROM}}
+PARAMETER temperature {{TEMPERATURE}}
+PARAMETER num_ctx {{NUM_CTX}}
+PARAMETER stop "</s>"
+SYSTEM {{SYSTEM}}

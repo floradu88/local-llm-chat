@@ -1,0 +1,30 @@
+---
+description: Local LLM chat repo — Ollama setup, scripts, and machine bootstrap rules
+alwaysApply: true
+---
+
+# local-llm-chat project rule
+
+This repository configures **local Ollama coding models** and integrations (VS Code Continue, Cursor, Codegraph, Headroom) on Windows without admin when possible.
+
+## Required reading for setup tasks
+
+- `AGENTS.md`
+- `docs/agent-setup-playbook.md`
+
+## Machine setup
+
+When asked to set up local models or this repo on a machine, run or guide:
+
+```powershell
+.\scripts\Setup-Machine.ps1 -Tier 16GB
+```
+
+Use `-Tier 8GB` or `32GB` from the user's RAM. Prefer scripts in `scripts/` over ad-hoc commands.
+
+## Constraints
+
+- Do not commit `.gguf`, `models/**` blobs, or API/HF tokens.
+- Only download models from sources in `docs/trusted-sources.md`.
+- Ollama is the primary runtime; do not switch the stack to LM Studio unless asked.
+- After setup, verify `ollama list` and `http://localhost:11434/api/tags`, then point the editor at Ollama per `docs/integrations.md`.

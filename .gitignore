@@ -1,0 +1,28 @@
+# Local model weights (never commit)
+models/gguf/**
+models/ollama/**
+!models/gguf/.gitkeep
+!models/ollama/.gitkeep
+*.gguf
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Secrets / local env
+.env
+.env.*
+*.token
+hf_token.txt
+
+# Generated Modelfiles with absolute local paths
+Modelfile.local
+**/Modelfile.generated
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.log

@@ -1,0 +1,139 @@
+# Install models from the web
+
+Download coding LLMs onto disk, then register them with Ollama. Preferred sources: [trusted-sources.md](trusted-sources.md).
+
+## Disk layout
+
+```text
+models/
+  gguf/          # raw .gguf from Hugging Face / ModelScope / GitHub
+  ollama/        # Ollama blob store when OLLAMA_MODELS points here
+```
+
+```powershell
+.\scripts\Set-OllamaEnv.ps1 -Persistent
+```
+
+## Path A — Ollama Library (simplest)
+
+```powershell
+.\scripts\Download-FromOllama.ps1 -Model qwen2.5-coder:7b
+ollama list
+ollama run qwen2.5-coder:7b
+```
+
+Batch by RAM tier:
+
+```powershell
+.\scripts\Pull-CodingModels.ps1 -Tier 16GB
+```
+
+## Path B — Hugging Face → Ollama bridge
+
+When a Hub repo publishes GGUF for Ollama:
+
+```powershell
+.\scripts\Download-FromOllama.ps1 -HuggingFaceRepo "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF" -Quant Q4_K_M
+```
+
+Ollama pulls from `hf.co/...` and registers the tag locally. No separate Modelfile needed.
+
+## Path C — Hugging Face GGUF file → local import
+
+### 1. Download
+
+Requires [huggingface_hub](https://huggingface.co/docs/huggingface_hub) (recommended):
+
+```powershell
+pip install --user "huggingface_hub[cli]"
+.\scripts\Download-FromHuggingFace.ps1 `
+  -Repo "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF" `
+  -Include "*Q4_K_M.gguf"
+```
+
+Or pass a direct file URL / filename:
+
+```powershell
+.\scripts\Download-FromHuggingFace.ps1 `
+  -Repo "bartowski/Qwen2.5-Coder-7B-Instruct-GGUF" `
+  -File "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf"
+```
+
+Gated repos:
+
+```powershell
+$env:HF_TOKEN = "hf_..."   # or -Token
+.\scripts\Download-FromHuggingFace.ps1 -Repo "meta-llama/..." -Include "*.gguf"
+```
+
+### 2. Import into Ollama
+
+```powershell
+.\scripts\Import-GGUF.ps1 `
+  -GgufPath ".\models\gguf\bartowski\Qwen2.5-Coder-7B-Instruct-GGUF\Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf" `
+  -Name "qwen25-coder-local" `
+  -Context 8192 `
+  -Temperature 0.2
+```
+
+This writes a Modelfile and runs `ollama create`.
+
+### 3. Optional coding template
+
+```powershell
+.\scripts\New-CoderModelfile.ps1 `
+  -GgufPath "D:\path\to\model.Q4_K_M.gguf" `
+  -Name "coder" `
+  -OutFile ".\config\Modelfile.coder.generated"
+ollama create coder -f .\config\Modelfile.coder.generated
+```
+
+Example Modelfile body:
+
+```text
+FROM D:/code/projects/local-llm-chat/models/gguf/.../model.Q4_K_M.gguf
+PARAMETER temperature 0.2
+PARAMETER num_ctx 8192
+SYSTEM You are a careful coding assistant. Prefer correct, minimal changes and explain briefly when asked.
+```
+
+## Path D — ModelScope
+
+1. Open the model on [modelscope.cn](https://modelscope.cn) and download the GGUF (same quant as on HF if possible).
+2. Place it under `models/gguf/<org>/<name>/`.
+3. Run `Import-GGUF.ps1` as in Path C.
+
+## Path E — GitHub Releases
+
+1. Download the `.gguf` from the **upstream** project’s Releases only.
+2. Save under `models/gguf/` → `Import-GGUF.ps1`.
+
+## Verify
+
+```powershell
+ollama list
+ollama show <your-model-name>
+ollama run <your-model-name> "Explain what a PowerShell pipeline is in one sentence."
+```
+
+OpenAI-compatible API (for editors / Headroom):
+
+```powershell
+Invoke-RestMethod http://localhost:11434/api/tags
+# Chat Completions-compatible base: http://localhost:11434/v1
+```
+
+## Common coding tags (Library)
+
+| Family | Example tags |
+|--------|----------------|
+| Qwen2.5-Coder | `qwen2.5-coder:3b`, `:7b`, `:14b`, `:32b` |
+| DeepSeek-Coder-V2 | `deepseek-coder-v2:16b` (check Library for current tags) |
+| CodeLlama | `codellama:7b`, `:13b`, `:34b` |
+| StarCoder2 | `starcoder2:3b`, `:7b`, `:15b` |
+
+Exact tags change over time — confirm on [ollama.com/library](https://ollama.com/library).
+
+## Next
+
+Wire VS Code / Cursor / Codegraph / Headroom: [integrations.md](integrations.md).
