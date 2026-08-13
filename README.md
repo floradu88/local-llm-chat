@@ -21,6 +21,33 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 Pick **one** common case below.
 
+### Copy-paste: three example coding models (from this project)
+
+These are the three primary coding models used as examples in this repo (Ollama Library tags):
+
+| # | Model | Example tag | Good for |
+|---|--------|-------------|----------|
+| 1 | **Qwen2.5-Coder** | `qwen2.5-coder:7b` | Default coding assistant |
+| 2 | **DeepSeek-Coder-V2** | `deepseek-coder-v2:16b` | Strong multi-language / larger context (needs more RAM) |
+| 3 | **CodeLlama** | `codellama:13b` | Meta code family, widely supported |
+
+```powershell
+# Requires Ollama installed and running (Case A/B/C first)
+ollama pull qwen2.5-coder:7b
+ollama pull deepseek-coder-v2:16b
+ollama pull codellama:13b
+
+ollama list
+ollama run qwen2.5-coder:7b "Say ready"
+
+# Or via repo scripts:
+.\scripts\Download-FromOllama.ps1 -Model qwen2.5-coder:7b
+.\scripts\Download-FromOllama.ps1 -Model deepseek-coder-v2:16b
+.\scripts\Download-FromOllama.ps1 -Model codellama:13b
+```
+
+On low RAM / CPU-only machines, prefer smaller tags first (`qwen2.5-coder:3b`, `starcoder2:3b`) or `.\scripts\Pull-CodingModels.ps1 -Tier 8GB`.
+
 ---
 
 ### Case A — Fresh machine (most common)
@@ -200,6 +227,44 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 
 ---
 
+### Case N — Check GPU for Ollama (non-admin, then admin)
+
+**Non-admin first** (adapters, `nvidia-smi`, Ollama logs, verdict):
+
+```powershell
+cd D:\code\projects\local-llm-chat
+.\scripts\Test-GpuSupport.ps1
+.\scripts\Test-GpuSupport.ps1 -OutFile "$env:TEMP\ollama-gpu-report.txt"
+```
+
+**Admin / elevated** (UAC — pnputil, driverquery, elevated nvidia-smi). Same checks we ran manually before:
+
+```powershell
+# Option 1: built-in switch (non-admin report + admin section)
+.\scripts\Test-GpuSupport.ps1 -Elevated
+.\scripts\Test-GpuSupport.ps1 -Elevated -OutFile "$env:TEMP\ollama-gpu-full.txt"
+
+# Option 2: elevate helper script only
+$out = "$env:TEMP\gpu-admin-only.txt"
+.\scripts\Invoke-Elevated.ps1 `
+  -ScriptPath ".\scripts\Test-GpuSupport.Elevated.ps1" `
+  -ArgumentList @("-OutFile", $out)
+Get-Content $out
+
+# Option 3: raw Start-Process -Verb RunAs (equivalent)
+$script = (Resolve-Path ".\scripts\Test-GpuSupport.Elevated.ps1").Path
+Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList @(
+  "-NoProfile", "-ExecutionPolicy", "Bypass",
+  "-File", $script, "-OutFile", $out
+)
+```
+
+More copy-paste samples: [docs/powershell-admin-examples.md](docs/powershell-admin-examples.md).
+
+On unsupported GPUs (e.g. Kepler GT 650M / old drivers), Ollama stays on **CPU** — use smaller coding tiers. Admin rights do not unlock Ollama CUDA on that hardware.
+
+---
+
 ### Suggested order for a brand-new clone
 
 1. **Case A** (or B if Ollama exists) — includes verify via `Test-LocalSetup`  
@@ -227,12 +292,14 @@ Codegraph MCP ──────────────────────
 
 ## Best local coding models
 
-| Model | Why use it |
-|-------|------------|
-| **Qwen2.5-Coder** | Strong code reasoning; many sizes (3B–32B) |
-| **DeepSeek-Coder-V2** | Broad language coverage; large context options |
-| **CodeLlama** | Meta’s widely supported code family |
-| **StarCoder2** | Fast, lighter everyday coding help |
+| Model | Why use it | Example Ollama tag |
+|-------|------------|--------------------|
+| **Qwen2.5-Coder** | Strong code reasoning; many sizes (3B–32B) | `qwen2.5-coder:7b` |
+| **DeepSeek-Coder-V2** | Broad language coverage; large context options | `deepseek-coder-v2:16b` |
+| **CodeLlama** | Meta’s widely supported code family | `codellama:13b` |
+| **StarCoder2** (optional light) | Fast everyday help | `starcoder2:3b` |
+
+Copy-paste pulls for the three primary examples are at the top of **First time after git clone**.
 
 | System RAM (approx) | Suggested Ollama pulls |
 |---------------------|------------------------|
@@ -258,6 +325,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | [FEATURES.md](FEATURES.md) | Feature checklist + machine checks + nice-to-haves |
 | [AGENTS.md](AGENTS.md) | Instructions for local agents / LLMs |
 | [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md) | Machine bootstrap checklist |
+| [docs/powershell-admin-examples.md](docs/powershell-admin-examples.md) | Elevated / UAC PowerShell examples (GPU checks) |
 | [docs/powershell-ollama-setup.md](docs/powershell-ollama-setup.md) | Install Ollama, env vars, verify API |
 | [docs/trusted-sources.md](docs/trusted-sources.md) | Which hosts/orgs to trust |
 | [docs/install-models-from-web.md](docs/install-models-from-web.md) | Ollama Library, Hugging Face, ModelScope, Modelfile |
@@ -269,6 +337,9 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 |--------|------|
 | `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + install + pull + verify (`-Tier Auto`) |
 | `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–M |
+| `scripts/Test-GpuSupport.ps1` | Non-admin GPU/Ollama check; `-Elevated` for admin UAC driver check |
+| `scripts/Test-GpuSupport.Elevated.ps1` | Admin-only helper (pnputil / driverquery / nvidia-smi) |
+| `scripts/Invoke-Elevated.ps1` | Generic `Start-Process -Verb RunAs` launcher for any script |
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
 | `scripts/Update-CodingModels.ps1` | Re-pull / refresh tier models |
 | `scripts/Uninstall-Ollama.ps1` | Uninstall guidance + optional model cleanup |

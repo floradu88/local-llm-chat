@@ -136,16 +136,17 @@ Invoke-RestMethod http://localhost:11434/api/tags
 # Chat Completions-compatible base: http://localhost:11434/v1
 ```
 
-## Common coding tags (Library)
+## Example coding models (copy-paste)
 
-| Family | Example tags |
-|--------|----------------|
-| Qwen2.5-Coder | `qwen2.5-coder:3b`, `:7b`, `:14b`, `:32b` |
-| DeepSeek-Coder-V2 | `deepseek-coder-v2:16b` (check Library for current tags) |
-| CodeLlama | `codellama:7b`, `:13b`, `:34b` |
-| StarCoder2 | `starcoder2:3b`, `:7b`, `:15b` |
+Primary examples used across this repo:
 
-Exact tags change over time — confirm on [ollama.com/library](https://ollama.com/library).
+```powershell
+ollama pull qwen2.5-coder:7b
+ollama pull deepseek-coder-v2:16b
+ollama pull codellama:13b
+```
+
+See README **Copy-paste: three example coding models**.
 
 ## Next
 

@@ -62,13 +62,21 @@ Smoke chat:
 ollama run qwen2.5-coder:3b "Write a PowerShell function that reverses a string."
 ```
 
-## 4. Pull and manage coding models
+## Example coding models (copy-paste)
 
 ```powershell
-# Opinionated set by RAM tier
-.\scripts\Pull-CodingModels.ps1 -Tier 16GB
+ollama pull qwen2.5-coder:7b
+ollama pull deepseek-coder-v2:16b
+ollama pull codellama:13b
+```
 
-# Or a single tag
+Primary examples for this repo (see README). Exact tags: [ollama.com/library](https://ollama.com/library).
+
+Tier helper (optional):
+
+```powershell
+.\scripts\Pull-CodingModels.ps1 -Tier Auto
+# Or a single tag:
 .\scripts\Download-FromOllama.ps1 -Model qwen2.5-coder:7b
 ```
 

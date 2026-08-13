@@ -1,0 +1,80 @@
+# PowerShell: admin (elevated) examples
+
+Most of this toolkit is **non-admin**. Use elevation only for driver/device diagnostics (or when Windows policy blocks a per-user install).
+
+## Pattern A — built-in `-Elevated` switch (preferred for GPU)
+
+```powershell
+cd D:\code\projects\local-llm-chat   # your clone path
+
+# 1) Non-admin first (always)
+.\scripts\Test-GpuSupport.ps1
+
+# 2) Same script + admin driver/device section (UAC prompt)
+.\scripts\Test-GpuSupport.ps1 -Elevated
+
+# 3) Save full report (non-admin + admin sections)
+.\scripts\Test-GpuSupport.ps1 -Elevated -OutFile "$env:TEMP\ollama-gpu-report.txt"
+notepad "$env:TEMP\ollama-gpu-report.txt"
+```
+
+## Pattern B — elevate any script via helper
+
+```powershell
+cd D:\code\projects\local-llm-chat
+
+# Run the GPU elevated helper alone and write its output file
+$out = Join-Path $env:TEMP "gpu-admin-only.txt"
+.\scripts\Invoke-Elevated.ps1 `
+  -ScriptPath ".\scripts\Test-GpuSupport.Elevated.ps1" `
+  -ArgumentList @("-OutFile", $out)
+
+Get-Content $out
+```
+
+## Pattern C — one-liner `Start-Process -Verb RunAs` (same idea)
+
+```powershell
+cd D:\code\projects\local-llm-chat
+$out = "$env:TEMP\gpu-admin-only.txt"
+$script = (Resolve-Path ".\scripts\Test-GpuSupport.Elevated.ps1").Path
+
+Start-Process -FilePath "powershell.exe" -Verb RunAs -Wait -ArgumentList @(
+  "-NoProfile",
+  "-ExecutionPolicy", "Bypass",
+  "-File", $script,
+  "-OutFile", $out
+)
+
+Get-Content $out
+```
+
+## What the elevated GPU check runs (admin)
+
+These are the checks already wrapped in `Test-GpuSupport.Elevated.ps1`:
+
+```powershell
+# (inside elevated session)
+whoami /groups | Select-String "Administrators"
+pnputil /enum-devices /class Display
+driverquery /v | Select-String "NVIDIA|nvlddmkm|BasicDisplay|Indirect"
+& "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe"
+```
+
+## Other toolkit commands (usually stay non-admin)
+
+```powershell
+# Install / pull / verify — no admin
+.\scripts\Setup-Machine.ps1 -Tier Auto
+.\scripts\Show-SetupStatus.ps1
+.\scripts\Test-LocalSetup.ps1
+
+# Only elevate if you need the GPU admin block
+.\scripts\Test-GpuSupport.ps1 -Elevated
+```
+
+## Notes
+
+- Approving UAC does **not** make an unsupported GPU (e.g. GT 650M / Kepler) work with Ollama.
+- Prefer **User** env vars (`Set-OllamaEnv.ps1 -Persistent`) over Machine-level changes.
+- If UAC is denied, the non-admin report is still valid for Ollama CPU vs GPU verdict.

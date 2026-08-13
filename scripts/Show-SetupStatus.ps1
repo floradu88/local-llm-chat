@@ -90,6 +90,14 @@ if (Test-Path (Join-Path $RepoRoot ".codegraph")) {
   Write-Check "K" "WARN" "no .codegraph here (optional) - codegraph init"
 }
 
+# GPU (non-admin quick)
+$gpuScript = Join-Path $PSScriptRoot "Test-GpuSupport.ps1"
+if (Test-Path $gpuScript) {
+  Write-Check "GPU" "WARN" "run .\scripts\Test-GpuSupport.ps1 (add -Elevated for admin driver check)"
+} else {
+  Write-Check "GPU" "FAIL" "Test-GpuSupport.ps1 missing"
+}
+
 # L verify script exists
 $testScript = Join-Path $PSScriptRoot "Test-LocalSetup.ps1"
 if (Test-Path $testScript) {

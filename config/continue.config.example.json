@@ -1,22 +1,29 @@
 {
   "models": [
     {
-      "title": "Qwen2.5-Coder (Ollama)",
+      "title": "Qwen2.5-Coder 7B (Ollama)",
       "provider": "ollama",
       "model": "qwen2.5-coder:7b",
       "apiBase": "http://localhost:11434",
-      "systemMessage": "You are working in the local-llm-chat repository. For installing or configuring local models on this machine, follow AGENTS.md and docs/agent-setup-playbook.md. Prefer scripts under scripts/ (especially Setup-Machine.ps1). Only use trusted model sources from docs/trusted-sources.md. Never commit weights or tokens."
+      "systemMessage": "You are working in the local-llm-chat repository. For installing or configuring local models on this machine, follow AGENTS.md, FEATURES.md, and docs/agent-setup-playbook.md. Prefer scripts under scripts/ (especially Setup-Machine.ps1). Only use trusted model sources from docs/trusted-sources.md. Never commit weights or tokens."
     },
     {
-      "title": "StarCoder2 (Ollama)",
+      "title": "DeepSeek-Coder-V2 16B (Ollama)",
       "provider": "ollama",
-      "model": "starcoder2:3b",
+      "model": "deepseek-coder-v2:16b",
+      "apiBase": "http://localhost:11434",
+      "systemMessage": "You are working in the local-llm-chat repository. For setup tasks, follow AGENTS.md and run scripts/Setup-Machine.ps1. Prefer existing scripts over ad-hoc installs."
+    },
+    {
+      "title": "CodeLlama 13B (Ollama)",
+      "provider": "ollama",
+      "model": "codellama:13b",
       "apiBase": "http://localhost:11434",
       "systemMessage": "You are working in the local-llm-chat repository. For setup tasks, follow AGENTS.md and run scripts/Setup-Machine.ps1. Prefer existing scripts over ad-hoc installs."
     }
   ],
   "tabAutocompleteModel": {
-    "title": "Autocomplete",
+    "title": "Autocomplete (Qwen2.5-Coder 3B)",
     "provider": "ollama",
     "model": "qwen2.5-coder:3b",
     "apiBase": "http://localhost:11434"
