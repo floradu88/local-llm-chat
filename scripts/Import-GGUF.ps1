@@ -22,6 +22,9 @@
 
 .PARAMETER KeepModelfile
   Keep generated Modelfile next to the GGUF
+
+.PARAMETER Force
+  Re-create even if an Ollama model with this name already exists.
 #>
 [CmdletBinding()]
 param(
@@ -33,7 +36,8 @@ param(
   [double] $Temperature = 0.2,
   [string] $System = "You are a careful coding assistant for the local-llm-chat repo. Prefer correct, minimal changes. For installing or configuring Ollama/local models on this machine, follow AGENTS.md and docs/agent-setup-playbook.md and run scripts/Setup-Machine.ps1. Use only trusted sources in docs/trusted-sources.md. Never commit model weights or tokens.",
   [string] $Template = "",
-  [switch] $KeepModelfile
+  [switch] $KeepModelfile,
+  [switch] $Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,6 +50,12 @@ if (-not (Test-OllamaCommand)) {
 
 if (-not (Test-Path $GgufPath)) {
   throw "GGUF not found: $GgufPath"
+}
+
+if (-not $Force -and (Test-OllamaModelInstalled -Name $Name)) {
+  Write-Host "Skip import (Ollama model already on disk): $Name"
+  Write-Host "Re-run with -Force to recreate from GGUF."
+  exit 0
 }
 
 $GgufPath = (Resolve-Path $GgufPath).Path

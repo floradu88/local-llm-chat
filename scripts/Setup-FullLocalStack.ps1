@@ -23,6 +23,15 @@
 .PARAMETER SkipInstall / SkipPull / SkipContinue / SkipCodegraph / SkipVerify
   Skip individual steps.
 
+.PARAMETER InstallGpuDrivers
+  Optional NVIDIA driver download/install (admin). See Install-GpuDrivers.ps1.
+
+.PARAMETER ForceGpuDrivers
+  Pass -Force to Install-GpuDrivers.ps1.
+
+.PARAMETER SkipCursor / ForceCursor
+  Passed through to Setup-Machine (Cursor check + per-user install).
+
 .PARAMETER ModelsRoot
   Optional OLLAMA_MODELS override.
 #>
@@ -37,6 +46,10 @@ param(
   [switch] $SkipContinue,
   [switch] $SkipCodegraph,
   [switch] $SkipVerify,
+  [switch] $InstallGpuDrivers,
+  [switch] $ForceGpuDrivers,
+  [switch] $SkipCursor,
+  [switch] $ForceCursor,
   [string] $ModelsRoot = ""
 )
 
@@ -66,13 +79,17 @@ $setupArgs = @{
 if ($SkipInstall) { $setupArgs["SkipInstall"] = $true }
 if ($SkipPull) { $setupArgs["SkipPull"] = $true }
 if ($ModelsRoot) { $setupArgs["ModelsRoot"] = $ModelsRoot }
+if ($InstallGpuDrivers) { $setupArgs["InstallGpuDrivers"] = $true }
+if ($ForceGpuDrivers) { $setupArgs["ForceGpuDrivers"] = $true }
+if ($SkipCursor) { $setupArgs["SkipCursor"] = $true }
+if ($ForceCursor) { $setupArgs["ForceCursor"] = $true }
 & (Join-Path $Scripts "Setup-Machine.ps1") @setupArgs
 
 if ($PullExampleModels -and -not $SkipPull) {
   Write-Host ""
   Write-Host "[1b] Pull three example coding models"
   foreach ($m in @("qwen2.5-coder:7b", "deepseek-coder-v2:16b", "codellama:13b")) {
-    Write-Host "  ollama pull $m"
+    Write-Host "  ensure model: $m"
     & (Join-Path $Scripts "Download-FromOllama.ps1") -Model $m
   }
 }

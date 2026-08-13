@@ -10,17 +10,22 @@
 
 .PARAMETER FileName
   Optional override for saved filename.
+
+.PARAMETER Force
+  Re-download even if the destination file already exists.
 #>
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
   [string] $Url,
   [string] $OutDir = "",
-  [string] $FileName = ""
+  [string] $FileName = "",
+  [switch] $Force
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "_common.ps1")
 
 if (-not $OutDir) {
   $OutDir = Join-Path $RepoRoot "models\gguf\direct"
@@ -36,6 +41,13 @@ if (-not $FileName) {
 }
 
 $dest = Join-Path $OutDir $FileName
+if (-not $Force -and (Test-LocalFilePresent -Path $dest)) {
+  $sizeMb = [math]::Round((Get-Item -LiteralPath $dest).Length / 1MB, 1)
+  Write-Host "Skip download (already on disk, $sizeMb MB): $dest"
+  Write-Host "Next: .\scripts\Import-GGUF.ps1 -GgufPath `"$dest`" -Name <local-name>"
+  return
+}
+
 Write-Host "Downloading:"
 Write-Host "  $Url"
 Write-Host "  -> $dest"

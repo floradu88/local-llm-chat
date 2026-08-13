@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Check whether this Windows machine can use a GPU with Ollama (non-admin by default).
 
@@ -32,6 +32,30 @@ function Add-Line([string] $s) {
 Add-Line "=== Test-GpuSupport (non-admin) ==="
 Add-Line ("Time: {0}" -f (Get-Date -Format o))
 Add-Line ("Repo: {0}" -f $RepoRoot)
+Add-Line ""
+
+# --- VM / passthrough ---
+$gpuEnv = Get-OllamaGpuEnvironment
+Add-Line "--- Virtual machine / GPU visibility ---"
+Add-Line ("  Virtual machine: {0}" -f $gpuEnv.IsVirtualMachine)
+if ($gpuEnv.IsVirtualMachine) {
+  Add-Line ("  Hypervisor: {0} (HypervisorPresent={1})" -f $gpuEnv.Hypervisor, $gpuEnv.HypervisorPresent)
+  foreach ($e in $gpuEnv.VmEvidence) {
+    Add-Line ("    evidence: {0}" -f $e)
+  }
+}
+Add-Line ("  NVIDIA visible in this OS: {0}" -f $gpuEnv.NvidiaPresent)
+if ($gpuEnv.IsVirtualMachine -and -not $gpuEnv.NvidiaPresent) {
+  Add-Line "  VM GPU usable with Ollama: NO until host exposes a GPU (passthrough / GPU-P / cloud GPU)."
+  Add-Line "  Optional drivers: .\scripts\Install-GpuDrivers.ps1  (will refuse install until NVIDIA is visible)"
+} elseif ($gpuEnv.IsVirtualMachine -and $gpuEnv.NvidiaPresent) {
+  Add-Line "  VM GPU usable with Ollama: YES if guest NVIDIA drivers are installed and CC 5.0+."
+  Add-Line "  Optional drivers: .\scripts\Install-GpuDrivers.ps1 -Install"
+} elseif ($gpuEnv.NvidiaPresent) {
+  Add-Line "  Optional drivers: .\scripts\Install-GpuDrivers.ps1 -Install"
+} else {
+  Add-Line "  Optional drivers: .\scripts\Install-GpuDrivers.ps1 -OpenDownloadPage"
+}
 Add-Line ""
 
 # --- Adapters ---
@@ -190,6 +214,10 @@ if ($vramMiB -and $vramMiB -lt 4096 -and -not $ccTooOld) {
   [void]$reasons.Add("VRAM ${vramMiB} MiB is tight for most coding models (4GB+ recommended)")
 }
 
+if ($gpuEnv.IsVirtualMachine -and -not $gpuEnv.NvidiaPresent) {
+  [void]$reasons.Add("VM without NVIDIA device in guest (need passthrough / GPU-P / cloud GPU first)")
+}
+
 if ($reasons.Count -eq 0 -and ($nvidiaName -or $gpuSmiName) -and $driverVersion) {
   $usable = $true
   Add-Line "  GPU likely usable with Ollama (still confirm with a model load + ollama ps)."
@@ -202,6 +230,11 @@ if ($reasons.Count -eq 0 -and ($nvidiaName -or $gpuSmiName) -and $driverVersion)
     Add-Line ("    - {0}" -f $ccNote)
   }
   Add-Line "  Practical path: run on CPU (use -Tier 8GB or 16GB coding models)."
+  if ($gpuEnv.CanInstallDrivers) {
+    Add-Line "  Optional: .\scripts\Install-GpuDrivers.ps1 -Install"
+  } elseif ($gpuEnv.IsVirtualMachine) {
+    Add-Line "  Optional: .\scripts\Install-GpuDrivers.ps1   # explains VM GPU options"
+  }
 }
 
 # --- Elevated section ---

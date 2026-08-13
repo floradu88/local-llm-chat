@@ -19,6 +19,9 @@
 
 .PARAMETER Url
   Direct HTTPS URL to a .gguf file (fallback without huggingface-cli).
+
+.PARAMETER Force
+  Re-download even if matching .gguf files are already under OutDir.
 #>
 [CmdletBinding()]
 param(
@@ -27,7 +30,8 @@ param(
   [string] $Include = "",
   [string] $OutDir = "",
   [string] $Token = "",
-  [string] $Url = ""
+  [string] $Url = "",
+  [switch] $Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,6 +58,12 @@ if ($Url) {
   New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
   $name = Split-Path -Leaf ([Uri]$Url).AbsolutePath
   $dest = Join-Path $OutDir $name
+  if (-not $Force -and (Test-LocalFilePresent -Path $dest)) {
+    $sizeMb = [math]::Round((Get-Item -LiteralPath $dest).Length / 1MB, 1)
+    Write-Host "Skip download (already on disk, $sizeMb MB): $dest"
+    Write-Host "Next: .\scripts\Import-GGUF.ps1 -GgufPath `"$dest`" -Name <local-name>"
+    return
+  }
   Write-Host "Downloading $Url -> $dest"
   Invoke-WebRequest -Uri $Url -OutFile $dest
   Write-Host "Saved: $dest"
@@ -71,6 +81,33 @@ if (-not $OutDir) {
 }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
+
+# Skip when a matching GGUF is already present (exact -File, or any *.gguf for -Include / whole repo)
+if (-not $Force) {
+  $existing = @()
+  if ($File) {
+    $candidate = Join-Path $OutDir $File
+    if (Test-LocalFilePresent -Path $candidate) {
+      $existing = @(Get-Item -LiteralPath $candidate)
+    }
+  } else {
+    $existing = @(Get-ChildItem -Path $OutDir -Recurse -Filter "*.gguf" -File -ErrorAction SilentlyContinue)
+    if ($Include -and $existing.Count -gt 0) {
+      # Convert simple *foo* globs to wildcard match
+      $existing = @($existing | Where-Object { $_.Name -like $Include })
+    }
+  }
+  if ($existing.Count -gt 0) {
+    Write-Host "Skip download (already on disk under $OutDir):"
+    foreach ($f in $existing) {
+      $mb = [math]::Round($f.Length / 1MB, 1)
+      Write-Host ("  {0} ({1} MB)" -f $f.FullName, $mb)
+    }
+    Write-Host "Next: .\scripts\Import-GGUF.ps1 -GgufPath <path-to.gguf> -Name <local-name>"
+    Write-Host "(Re-download with -Force if you need a fresh copy.)"
+    return
+  }
+}
 
 $hf = Get-HfCli
 if (-not $hf) {

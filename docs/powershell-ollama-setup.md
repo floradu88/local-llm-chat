@@ -111,6 +111,9 @@ Typical parameters for code: lower temperature (`0.1`–`0.3`), larger `num_ctx`
 ## 6. GPU notes
 
 - **NVIDIA:** install current Game Ready / Studio drivers (≥ 551.61 recommended).
+  - Detect / optional install: `.\scripts\Install-GpuDrivers.ps1` (add `-Install` for download + UAC).
+  - Check usability: `.\scripts\Test-GpuSupport.ps1`
+- **VMs:** a guest can use a GPU **only if** the hypervisor exposes one (PCIe passthrough, Hyper-V GPU-P, GRID/vGPU, or a cloud GPU VM). A VM that only has Hyper-V Video / VMware SVGA / VirtualBox graphics cannot use the host GPU; installing NVIDIA drivers in that guest will not help.
 - **AMD:** ROCm v7 / HIP7 or Vulkan; see Ollama Windows troubleshooting if the wrong GPU is selected (`GGML_VK_VISIBLE_DEVICES`).
 - CPU-only works; it is slower.
 

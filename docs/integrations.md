@@ -25,6 +25,12 @@ To use **multiple models**: keep several entries in the Continue config (see the
 
 ## Cursor — local OpenAI-compatible endpoint
 
+Install or verify the desktop app (per-user, no admin):
+
+```powershell
+.\scripts\Install-Cursor.ps1
+```
+
 ### Direct to Ollama
 
 1. Cursor Settings → **Models**.

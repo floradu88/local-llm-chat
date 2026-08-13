@@ -10,12 +10,16 @@
 
 .PARAMETER Quant
   Optional quant suffix for HF bridge (e.g. Q4_K_M)
+
+.PARAMETER Force
+  Re-pull even if the model is already installed locally.
 #>
 [CmdletBinding()]
 param(
   [string] $Model = "",
   [string] $HuggingFaceRepo = "",
-  [string] $Quant = ""
+  [string] $Quant = "",
+  [switch] $Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,18 +29,24 @@ if (-not (Test-OllamaCommand)) {
   throw "ollama not found on PATH. Run .\scripts\Install-Ollama.ps1 first."
 }
 
+function Invoke-OllamaPull([string] $Tag) {
+  if (-not $Force -and (Test-OllamaModelInstalled -Name $Tag)) {
+    Write-Host "Skip pull (already on disk): $Tag"
+    return 0
+  }
+  Write-Host "Pulling $Tag ..."
+  ollama pull $Tag
+  return $LASTEXITCODE
+}
+
 if ($HuggingFaceRepo) {
   $tag = "hf.co/$HuggingFaceRepo"
   if ($Quant) { $tag = "$tag`:$Quant" }
-  Write-Host "Pulling $tag ..."
-  ollama pull $tag
-  exit $LASTEXITCODE
+  exit (Invoke-OllamaPull $tag)
 }
 
 if (-not $Model) {
   throw "Specify -Model <tag> or -HuggingFaceRepo <org/repo>."
 }
 
-Write-Host "Pulling $Model ..."
-ollama pull $Model
-exit $LASTEXITCODE
+exit (Invoke-OllamaPull $Model)

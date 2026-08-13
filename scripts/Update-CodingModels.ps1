@@ -20,5 +20,5 @@ if (-not (Test-OllamaCommand)) {
 }
 
 $resolved = Resolve-CodingModelTier -Tier $Tier
-Write-Host "Update-CodingModels: tier $resolved (requested: $Tier)"
-& (Join-Path $PSScriptRoot "Pull-CodingModels.ps1") -Tier $resolved -SkipSmoke:$SkipSmoke
+Write-Host "Update-CodingModels: tier $resolved (requested: $Tier) - Force re-pull"
+& (Join-Path $PSScriptRoot "Pull-CodingModels.ps1") -Tier $resolved -SkipSmoke:$SkipSmoke -Force

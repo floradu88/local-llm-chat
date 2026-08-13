@@ -73,8 +73,14 @@ if (Test-Path $continueCfg) {
   Write-Check "H" "WARN" "Continue config missing - Install-ContinueConfig.ps1"
 }
 
-# I Cursor - cannot auto-detect settings reliably
-Write-Check "I" "WARN" "Cursor: manually set base URL http://localhost:11434/v1 (cannot auto-verify)"
+# I Cursor
+$cursorInfo = Get-CursorInstallInfo
+if ($cursorInfo.Installed) {
+  Write-Check "I" "OK" ("Cursor installed ({0}): {1}" -f $cursorInfo.Scope, $(if ($cursorInfo.ExePath) { $cursorInfo.ExePath } else { $cursorInfo.CmdPath }))
+  Write-Check "I-cfg" "WARN" "still set Models base URL http://localhost:11434/v1 manually"
+} else {
+  Write-Check "I" "FAIL" "Cursor missing - run .\scripts\Install-Cursor.ps1"
+}
 
 # J Headroom
 if (Get-Command headroom -ErrorAction SilentlyContinue) {
@@ -92,10 +98,16 @@ if (Test-Path (Join-Path $RepoRoot ".codegraph")) {
 
 # GPU (non-admin quick)
 $gpuScript = Join-Path $PSScriptRoot "Test-GpuSupport.ps1"
+$gpuInstall = Join-Path $PSScriptRoot "Install-GpuDrivers.ps1"
 if (Test-Path $gpuScript) {
   Write-Check "GPU" "WARN" "run .\scripts\Test-GpuSupport.ps1 (add -Elevated for admin driver check)"
 } else {
   Write-Check "GPU" "FAIL" "Test-GpuSupport.ps1 missing"
+}
+if (Test-Path $gpuInstall) {
+  Write-Check "GPU-DRV" "WARN" "optional: .\scripts\Install-GpuDrivers.ps1 (-Install if NVIDIA visible)"
+} else {
+  Write-Check "GPU-DRV" "FAIL" "Install-GpuDrivers.ps1 missing"
 }
 
 # L verify script exists

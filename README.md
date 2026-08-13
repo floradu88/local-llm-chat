@@ -178,6 +178,15 @@ Install the **Continue** extension in VS Code, reload, pick an Ollama model from
 
 ### Case I — Wire Cursor after models work
 
+**Install / check Cursor (per-user, no admin):**
+
+```powershell
+.\scripts\Install-Cursor.ps1            # skip if already installed
+.\scripts\Install-Cursor.ps1 -CheckOnly # status only (exit 1 if missing)
+```
+
+Then configure models:
+
 1. Cursor **Settings → Models**
 2. Base URL: `http://localhost:11434/v1`
 3. API key: `ollama`
@@ -272,6 +281,28 @@ Start-Process powershell.exe -Verb RunAs -Wait -ArgumentList @(
 More copy-paste samples: [docs/powershell-admin-examples.md](docs/powershell-admin-examples.md).
 
 On unsupported GPUs (e.g. Kepler GT 650M / old drivers), Ollama stays on **CPU** — use smaller coding tiers. Admin rights do not unlock Ollama CUDA on that hardware.
+
+**Optional NVIDIA driver install** (admin/UAC; skipped for VMs with no GPU in the guest):
+
+```powershell
+# Detect only — answers "can this VM use a GPU?"
+.\scripts\Install-GpuDrivers.ps1
+
+# Download + elevate installer when an NVIDIA device is visible
+.\scripts\Install-GpuDrivers.ps1 -Install
+
+# Or open NVIDIA's official picker
+.\scripts\Install-GpuDrivers.ps1 -OpenDownloadPage
+
+# Opt-in during machine setup:
+.\scripts\Setup-Machine.ps1 -Tier Auto -InstallGpuDrivers
+```
+
+| Guest situation | Can Ollama use a GPU? |
+|-----------------|------------------------|
+| Bare metal NVIDIA | Yes, with current drivers (CC 5.0+) |
+| VM **with** NVIDIA device (passthrough / GPU-P / GRID / cloud GPU) | Yes — install guest NVIDIA drivers |
+| VM **without** NVIDIA (Hyper-V Video / VMware SVGA / VirtualBox only) | No — expose a GPU from the host first |
 
 ---
 
@@ -387,6 +418,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Invoke-ModelWorkflow.ps1` | DraftReview / PlanImplement / CompareJudge pipelines |
 | `scripts/Test-GpuSupport.ps1` | Non-admin GPU/Ollama check; `-Elevated` for admin UAC driver check |
 | `scripts/Test-GpuSupport.Elevated.ps1` | Admin-only helper (pnputil / driverquery / nvidia-smi) |
+| `scripts/Install-GpuDrivers.ps1` | Optional NVIDIA drivers + VM GPU guidance (`-Install` / `-OpenDownloadPage`) |
 | `scripts/Invoke-Elevated.ps1` | Generic `Start-Process -Verb RunAs` launcher for any script |
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
 | `scripts/Update-CodingModels.ps1` | Re-pull / refresh tier models |
@@ -395,6 +427,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Set-OllamaEnv.ps1` | Set `OLLAMA_MODELS` / install dir |
 | `scripts/Install-Ollama.ps1` | Official per-user install |
 | `scripts/Install-ContinueConfig.ps1` | Copy Continue config for VS Code (Case H) |
+| `scripts/Install-Cursor.ps1` | Check Cursor; install per-user if missing (Case I) |
 | `scripts/Download-FromOllama.ps1` | `ollama pull` (+ optional `hf.co` bridge) |
 | `scripts/Download-FromHuggingFace.ps1` | Download GGUF to `models/gguf` |
 | `scripts/Download-FromUrl.ps1` | Direct URL (ModelScope / GitHub Releases) |

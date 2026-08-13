@@ -7,12 +7,16 @@
 
 .PARAMETER SkipSmoke
   Do not run a one-prompt smoke test after pulls.
+
+.PARAMETER Force
+  Re-pull models even when they are already installed locally.
 #>
 [CmdletBinding()]
 param(
   [ValidateSet("8GB", "16GB", "32GB", "Auto")]
   [string] $Tier = "16GB",
-  [switch] $SkipSmoke
+  [switch] $SkipSmoke,
+  [switch] $Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,19 +30,32 @@ $Tier = Resolve-CodingModelTier -Tier $Tier
 $models = Get-CodingModelsForTier -Tier $Tier
 $list = $models -join ", "
 Write-Host "Tier $Tier - pulling: $list"
+if ($Force) {
+  Write-Host "(Force: re-pull even if already on disk)"
+}
 
+$skipped = 0
+$pulled = 0
 foreach ($m in $models) {
   Write-Host ""
+  if (-not $Force -and (Test-OllamaModelInstalled -Name $m)) {
+    Write-Host "=== skip (already on disk): $m ==="
+    $skipped++
+    continue
+  }
   Write-Host "=== ollama pull $m ==="
   ollama pull $m
   if ($LASTEXITCODE -ne 0) {
     Write-Warning "Pull failed for $m (exit $LASTEXITCODE). Continuing."
+  } else {
+    $pulled++
   }
 }
 
 Write-Host ""
 Write-Host "Installed models:"
 ollama list
+Write-Host ("Summary: pulled={0} skipped={1} force={2}" -f $pulled, $skipped, [bool]$Force)
 
 if (-not $SkipSmoke) {
   $smoke = $models[0]

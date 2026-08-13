@@ -36,6 +36,10 @@ Flags:
 | `-SkipInstall` | Ollama already installed |
 | `-SkipPull` | Skip model pulls |
 | `-SkipHeadroomHint` | Less console output about Headroom |
+| `-InstallGpuDrivers` | Optional NVIDIA driver download + UAC install |
+| `-ForceGpuDrivers` | Force driver install attempt (e.g. odd VM layouts) |
+| `-SkipCursor` | Do not check/install Cursor |
+| `-ForceCursor` | Re-run Cursor installer even if present |
 
 What it does:
 
@@ -78,7 +82,13 @@ Follow [integrations.md](integrations.md) and README Cases H/I:
 
 Then install the Continue extension; set model to an installed tag.
 
-**Cursor:** Models → base URL `http://localhost:11434/v1`, API key `ollama`, model = Ollama tag. Checklist: `config\cursor-openai-local.example.md`.
+**Cursor:**
+
+```powershell
+.\scripts\Install-Cursor.ps1   # installs for current user if missing
+```
+
+Then Models → base URL `http://localhost:11434/v1`, API key `ollama`, model = Ollama tag. Checklist: `config\cursor-openai-local.example.md`.
 
 ## Step 4 — optional Headroom
 

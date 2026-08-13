@@ -1,4 +1,4 @@
-# Shared helpers for local-llm-chat scripts (dot-source from other scripts).
+﻿# Shared helpers for local-llm-chat scripts (dot-source from other scripts).
 # Usage: . (Join-Path $PSScriptRoot "_common.ps1")
 
 function Get-RepoRoot {
@@ -31,6 +31,178 @@ function Test-OllamaApi {
   } catch {
     return $false
   }
+}
+
+function Get-OllamaModelsRoots {
+  $roots = @()
+  foreach ($candidate in @(
+      $env:OLLAMA_MODELS,
+      (Join-Path (Split-Path -Parent $PSScriptRoot) "models\ollama"),
+      (Join-Path $env:USERPROFILE ".ollama\models")
+    )) {
+    if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+      $full = (Resolve-Path -LiteralPath $candidate).Path
+      if ($roots -notcontains $full) {
+        $roots += $full
+      }
+    }
+  }
+  return $roots
+}
+
+function Get-OllamaInstalledModelNames {
+  <#
+  .SYNOPSIS
+    Names Ollama already has locally (on-disk manifests first, then API).
+  #>
+  $list = New-Object System.Collections.ArrayList
+
+  # Prefer on-disk manifests (fast; works when the API/tray is down)
+  foreach ($root in @(Get-OllamaModelsRoots)) {
+    $manifestRoot = Join-Path $root "manifests"
+    if (-not (Test-Path -LiteralPath $manifestRoot)) { continue }
+    Get-ChildItem -LiteralPath $manifestRoot -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+      $rel = $_.FullName.Substring($manifestRoot.Length).TrimStart("\", "/")
+      $parts = $rel -split "[\\/]"
+      if ($parts.Count -lt 2) { return }
+      $hostPart = $parts[0]
+      $n = $null
+      if ($hostPart -eq "registry.ollama.ai" -and $parts.Count -ge 4 -and $parts[1] -eq "library") {
+        $n = "{0}:{1}" -f $parts[2], $parts[3]
+      } elseif ($hostPart -eq "hf.co" -and $parts.Count -ge 3) {
+        $n = "hf.co/{0}" -f ($parts[1..($parts.Count - 1)] -join "/")
+      }
+      if ($n -and ($list -notcontains $n)) { [void]$list.Add($n) }
+    }
+  }
+
+  try {
+    $tags = Invoke-RestMethod -Uri "http://127.0.0.1:11434/api/tags" -TimeoutSec 2
+    foreach ($m in @($tags.models)) {
+      $n = ([string]$m.name).Trim()
+      if ($n -and ($list -notcontains $n)) { [void]$list.Add($n) }
+    }
+  } catch { }
+
+  return @($list.ToArray())
+}
+
+function Test-OllamaModelInstalled {
+  <#
+  .SYNOPSIS
+    True if the model tag is already available locally (skip re-download).
+  #>
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $Name
+  )
+  $want = $Name.Trim()
+  if (-not $want) { return $false }
+
+  $installed = @(Get-OllamaInstalledModelNames)
+  foreach ($have in $installed) {
+    if ([string]::Equals($have, $want, [StringComparison]::OrdinalIgnoreCase)) {
+      return $true
+    }
+  }
+
+  # Accept bare name when only :latest exists, and vice versa
+  $wantBase = $want
+  $wantTag = "latest"
+  if ($want -match "^(?<base>.+):(?<tag>[^:/]+)$") {
+    $wantBase = $Matches["base"]
+    $wantTag = $Matches["tag"]
+  }
+  foreach ($have in $installed) {
+    $haveBase = $have
+    $haveTag = "latest"
+    if ($have -match "^(?<base>.+):(?<tag>[^:/]+)$") {
+      $haveBase = $Matches["base"]
+      $haveTag = $Matches["tag"]
+    }
+    if ([string]::Equals($haveBase, $wantBase, [StringComparison]::OrdinalIgnoreCase) -and
+        [string]::Equals($haveTag, $wantTag, [StringComparison]::OrdinalIgnoreCase)) {
+      return $true
+    }
+    if ($want -notmatch ":" -and
+        [string]::Equals($haveBase, $want, [StringComparison]::OrdinalIgnoreCase) -and
+        $haveTag -eq "latest") {
+      return $true
+    }
+  }
+
+  return $false
+}
+
+function Test-LocalFilePresent {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $Path,
+    [long] $MinBytes = 1
+  )
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    return $false
+  }
+  try {
+    return ((Get-Item -LiteralPath $Path).Length -ge $MinBytes)
+  } catch {
+    return $false
+  }
+}
+
+function Get-CursorExeCandidates {
+  @(
+    (Join-Path $env:LOCALAPPDATA "Programs\Cursor\Cursor.exe"),
+    (Join-Path $env:LOCALAPPDATA "Programs\cursor\Cursor.exe"),
+    (Join-Path ${env:ProgramFiles} "Cursor\Cursor.exe"),
+    (Join-Path ${env:ProgramFiles} "cursor\Cursor.exe"),
+    (Join-Path ${env:ProgramFiles(x86)} "Cursor\Cursor.exe")
+  ) | Where-Object { $_ }
+}
+
+function Get-CursorInstallInfo {
+  <#
+  .SYNOPSIS
+    Locate Cursor.exe (prefer per-user install under LocalAppData).
+  #>
+  $exe = $null
+  $scope = "None"
+  foreach ($candidate in @(Get-CursorExeCandidates)) {
+    if (Test-Path -LiteralPath $candidate) {
+      $exe = (Resolve-Path -LiteralPath $candidate).Path
+      if ($exe -like (Join-Path $env:LOCALAPPDATA "*")) {
+        $scope = "User"
+      } else {
+        $scope = "Machine"
+      }
+      break
+    }
+  }
+
+  $cmd = $null
+  $c = Get-Command cursor -ErrorAction SilentlyContinue
+  if ($c -and $c.Source) {
+    $cmd = $c.Source
+    if (-not $exe) {
+      # cursor.cmd often lives under resources\app\bin
+      $maybe = Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $cmd))) "Cursor.exe"
+      if (Test-Path -LiteralPath $maybe) {
+        $exe = (Resolve-Path -LiteralPath $maybe).Path
+        if ($exe -like (Join-Path $env:LOCALAPPDATA "*")) { $scope = "User" } else { $scope = "Machine" }
+      }
+    }
+  }
+
+  return [pscustomobject]@{
+    Installed = [bool]($exe -or $cmd)
+    ExePath   = $exe
+    CmdPath   = $cmd
+    Scope     = $scope
+  }
+}
+
+function Test-CursorInstalled {
+  return [bool]((Get-CursorInstallInfo).Installed)
 }
 
 function Get-PythonUserScriptsPath {
@@ -91,4 +263,187 @@ function Get-CodingModelsForTier {
     throw "Unknown tier: $Tier"
   }
   return ,$sets[$Tier]
+}
+
+function Get-VirtualMachineInfo {
+  <#
+  .SYNOPSIS
+    Detect whether this OS is running inside a VM and guess the hypervisor.
+  #>
+  $info = [ordered]@{
+    IsVirtualMachine = $false
+    Hypervisor       = "None"
+    Manufacturer     = ""
+    Model            = ""
+    HypervisorPresent = $false
+    Evidence         = @()
+  }
+
+  try {
+    $cs = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
+    $info.Manufacturer = [string]$cs.Manufacturer
+    $info.Model = [string]$cs.Model
+    if ($cs.PSObject.Properties.Name -contains "HypervisorPresent") {
+      $info.HypervisorPresent = [bool]$cs.HypervisorPresent
+    }
+  } catch { }
+
+  $blob = ("{0} {1}" -f $info.Manufacturer, $info.Model)
+  $evidence = New-Object System.Collections.Generic.List[string]
+
+  # HypervisorPresent is also True on bare metal with Hyper-V / VBS - note only, do not decide alone.
+  if ($info.HypervisorPresent) {
+    [void]$evidence.Add("Win32_ComputerSystem.HypervisorPresent=True (also common on bare metal with Hyper-V/VBS)")
+  }
+
+  $patterns = @(
+    @{ Re = "VMware"; Name = "VMware" },
+    @{ Re = "VirtualBox|innotek|Oracle.*Virtual"; Name = "VirtualBox" },
+    @{ Re = "Hyper-V|Virtual Machine"; Name = "Hyper-V" },
+    @{ Re = "QEMU|KVM|KVM Virtual|Standard PC \(Q35|Standard PC \(i440FX"; Name = "QEMU/KVM" },
+    @{ Re = "Xen|HVM domU"; Name = "Xen" },
+    @{ Re = "Parallels"; Name = "Parallels" },
+    @{ Re = "Bochs"; Name = "Bochs" },
+    @{ Re = "Amazon EC2|Google Compute|Microsoft Corporation.*Virtual"; Name = "Cloud VM" }
+  )
+  foreach ($p in $patterns) {
+    if ($blob -match $p.Re) {
+      $info.IsVirtualMachine = $true
+      if ($info.Hypervisor -eq "None") { $info.Hypervisor = $p.Name }
+      [void]$evidence.Add("Model/Manufacturer match: $($p.Name)")
+    }
+  }
+
+  # Virtual display adapters often present even when Model string is ambiguous
+  try {
+    $adapters = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue)
+    foreach ($a in $adapters) {
+      $n = [string]$a.Name
+      if ($n -match "Hyper-V Video|VMware SVGA|VMware WDDM|VirtualBox Graphics|QXL|Virtio.?GPU") {
+        $info.IsVirtualMachine = $true
+        [void]$evidence.Add("Virtual display adapter: $n")
+        if ($info.Hypervisor -eq "None") {
+          if ($n -match "Hyper-V") { $info.Hypervisor = "Hyper-V" }
+          elseif ($n -match "VMware") { $info.Hypervisor = "VMware" }
+          elseif ($n -match "VirtualBox") { $info.Hypervisor = "VirtualBox" }
+          elseif ($n -match "QXL|Virtio") { $info.Hypervisor = "QEMU/KVM" }
+        }
+      }
+    }
+  } catch { }
+
+  $info.Evidence = @($evidence.ToArray())
+  return [pscustomobject]$info
+}
+
+function Get-NvidiaDisplayAdapters {
+  $result = @()
+  try {
+    $adapters = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue)
+  } catch {
+    $adapters = @()
+  }
+  foreach ($a in $adapters) {
+    $name = [string]$a.Name
+    $pnp = [string]$a.PNPDeviceID
+    $isNvidia = ($name -match "NVIDIA|GeForce|Quadro|Tesla|RTX|GTX|GRID") -or ($pnp -match "VEN_10DE")
+    if (-not $isNvidia) { continue }
+    $devId = $null
+    if ($pnp -match "DEV_([0-9A-Fa-f]{4})") {
+      $devId = ([string]$Matches[1]).ToUpperInvariant()
+    }
+    $result += [pscustomobject]@{
+      Name           = $name
+      DriverVersion  = [string]$a.DriverVersion
+      PNPDeviceID    = $pnp
+      DeviceId       = $devId
+      Status         = [string]$a.Status
+    }
+  }
+  return $result
+}
+
+function Get-OllamaGpuEnvironment {
+  <#
+  .SYNOPSIS
+    Summarize whether this machine (including VMs) can use a GPU with Ollama,
+    and whether installing NVIDIA drivers in this OS makes sense.
+  #>
+  $vm = Get-VirtualMachineInfo
+  $nvidia = @(Get-NvidiaDisplayAdapters)
+  $nvidiaPresent = $nvidia.Count -gt 0
+
+  $virtualOnly = $false
+  if ($vm.IsVirtualMachine -and -not $nvidiaPresent) {
+    $virtualOnly = $true
+  }
+
+  $canUseGpu = $false
+  $canInstallDrivers = $false
+  $guidance = New-Object System.Collections.Generic.List[string]
+
+  if ($nvidiaPresent) {
+    $canUseGpu = $true
+    $canInstallDrivers = $true
+    if ($vm.IsVirtualMachine) {
+      [void]$guidance.Add("VM with an NVIDIA device visible - GPU acceleration is possible (passthrough, GPU-P, GRID/vGPU, or cloud GPU).")
+      [void]$guidance.Add("Install NVIDIA drivers inside this guest (GeForce/Studio for consumer passthrough; GRID/vGPU drivers for enterprise/cloud vGPU).")
+      [void]$guidance.Add("After install, restart the guest and run .\scripts\Test-GpuSupport.ps1")
+    } else {
+      [void]$guidance.Add("Bare metal NVIDIA GPU detected - install current Studio/Game Ready drivers (>= 551.61 for Ollama).")
+    }
+  } elseif ($vm.IsVirtualMachine) {
+    [void]$guidance.Add("This OS looks like a VM ($($vm.Hypervisor)) with no NVIDIA device in the guest.")
+    [void]$guidance.Add("Installing NVIDIA drivers here will NOT unlock a host GPU - the hypervisor must expose one first.")
+    [void]$guidance.Add("Options: PCIe passthrough (Hyper-V DDA / VMware / Proxmox), Hyper-V GPU Partitioning (GPU-P), or a cloud GPU VM.")
+    [void]$guidance.Add("Until then, run Ollama on CPU (.\scripts\Setup-Machine.ps1 -Tier 8GB or 16GB).")
+  } else {
+    [void]$guidance.Add("No NVIDIA GPU detected for the CUDA path. Ollama can still run on CPU.")
+    [void]$guidance.Add("AMD: use ROCm/Vulkan per Ollama Windows docs. Intel iGPU is usually not useful for coding models.")
+  }
+
+  return [pscustomobject]@{
+    IsVirtualMachine   = [bool]$vm.IsVirtualMachine
+    Hypervisor         = $vm.Hypervisor
+    HypervisorPresent  = [bool]$vm.HypervisorPresent
+    VmEvidence         = $vm.Evidence
+    Manufacturer       = $vm.Manufacturer
+    Model              = $vm.Model
+    NvidiaPresent      = $nvidiaPresent
+    NvidiaAdapters     = $nvidia
+    VirtualDisplayOnly = $virtualOnly
+    CanUseGpuWithOllama = $canUseGpu
+    CanInstallDrivers  = $canInstallDrivers
+    Guidance           = @($guidance)
+  }
+}
+
+function Get-NvidiaDriverLookupIds {
+  <#
+  .SYNOPSIS
+    Heuristic NVIDIA product-series / product IDs for AjaxDriverService lookup.
+  #>
+  param([string] $GpuName = "")
+
+  # osID 57 = Windows 10/11 64-bit (DCH). pfid picks a representative chip in-series.
+  # Series IDs evolve; lookup fails -> caller should open the download page.
+  $psid = 129  # GeForce RTX 40 Series (default modern desktop)
+  $pfid = 985  # RTX 4090 stand-in for latest GRD/Studio channel
+
+  if ($GpuName -match "RTX\s*50") { $psid = 139; $pfid = 1025 }
+  elseif ($GpuName -match "RTX\s*40") { $psid = 129; $pfid = 985 }
+  elseif ($GpuName -match "RTX\s*30") { $psid = 120; $pfid = 929 }
+  elseif ($GpuName -match "RTX\s*20|TITAN RTX") { $psid = 101; $pfid = 859 }
+  elseif ($GpuName -match "GTX\s*16") { $psid = 101; $pfid = 907 }
+  elseif ($GpuName -match "GTX\s*10") { $psid = 101; $pfid = 845 }
+  elseif ($GpuName -match "Quadro|RTX A|Tesla|GRID") {
+    # Enterprise: still try GeForce channel; caller should prefer NVIDIA enterprise page if this fails
+    $psid = 129; $pfid = 985
+  }
+
+  return [pscustomobject]@{
+    ProductSeriesId = $psid
+    ProductId       = $pfid
+    OsId            = 57
+  }
 }

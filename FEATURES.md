@@ -19,6 +19,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] GGUF → Ollama import (`Import-GGUF.ps1`)
 - [x] Coding Modelfile helper (`New-CoderModelfile.ps1`)
 - [x] Continue example + installer (`Install-ContinueConfig.ps1`) — three example models in config
+- [x] Cursor check + per-user install (`Install-Cursor.ps1`)
 - [x] Cursor checklist (`config/cursor-openai-local.example.md`)
 - [x] Headroom → Ollama proxy (`Start-HeadroomOllama.ps1`)
 - [x] Codegraph docs (`docs/integrations.md`)
@@ -34,6 +35,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Model refresh / update pulls (`Update-CodingModels.ps1`)
 - [x] Uninstall / cleanup helper (`Uninstall-Ollama.ps1`)
 - [x] GPU support check non-admin + elevated (`Test-GpuSupport.ps1`)
+- [x] Optional NVIDIA driver install + VM GPU guidance (`Install-GpuDrivers.ps1`)
 - [x] Elevated script launcher (`Invoke-Elevated.ps1`)
 - [x] Admin PowerShell examples doc (`docs/powershell-admin-examples.md`)
 - [x] Sample prompts + eval (`config/sample-prompts.md`, `Eval-CodingModel.ps1`)
@@ -45,6 +47,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Refresh model pulls (`Update-CodingModels.ps1`)
 - [x] Uninstall / cleanup (`Uninstall-Ollama.ps1`)
 - [x] GPU usable with Ollama? (`Test-GpuSupport.ps1` + `-Elevated`)
+- [x] Optional GPU drivers / VM passthrough guidance (`Install-GpuDrivers.ps1`; `-InstallGpuDrivers` on setup)
 - [x] Elevate any script (`Invoke-Elevated.ps1`)
 - [x] Admin examples Patterns A/B/C (`docs/powershell-admin-examples.md`)
 - [x] Sample coding eval prompts
@@ -62,14 +65,16 @@ Mark these on each machine after you run setup:
 - [ ] `(machine)` `OLLAMA_MODELS` points at preferred disk (Case D optional)
 - [ ] `(machine)` `Test-LocalSetup.ps1` / `Show-SetupStatus.ps1` green
 - [ ] `(machine)` VS Code Continue configured (Case H)
-- [ ] `(machine)` Cursor base URL → Ollama (Case I)
+- [ ] `(machine)` Cursor installed (`Install-Cursor.ps1`) + base URL → Ollama (Case I)
 - [ ] `(machine)` Headroom installed if desired (Case J)
 - [ ] `(machine)` `codegraph init` where needed (Case K)
 - [ ] `(machine)` GPU check run (`Test-GpuSupport.ps1`; `-Elevated` optional)
+- [ ] `(machine)` GPU drivers if needed (`Install-GpuDrivers.ps1`; VM needs passthrough first)
 
 ```powershell
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Test-GpuSupport.ps1
+.\scripts\Install-GpuDrivers.ps1
 ```
 
 ## Out of scope (intentionally not built)
@@ -79,7 +84,6 @@ Mark these on each machine after you run setup:
 - [ ] Bundle weights in git (never)
 - [ ] Admin Windows service / NSSM
 - [ ] Auto-write Cursor `settings.json`
-- [ ] GPU driver installer
 - [ ] Native ModelScope SDK client (URL download is enough)
 
 ## How to use
