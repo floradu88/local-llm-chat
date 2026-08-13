@@ -1,28 +1,99 @@
-# Local model weights (never commit)
+# === Local model weights (never commit) ===
 models/gguf/**
 models/ollama/**
 !models/gguf/.gitkeep
 !models/ollama/.gitkeep
+models/**/*.gguf
+models/**/*.bin
+models/**/*.safetensors
+
+# Common weight / quant formats (anywhere in repo)
 *.gguf
+*.gguf.*
+*.ggml
 *.bin
 *.safetensors
 *.pt
 *.pth
+*.ckpt
+*.onnx
+*.npz
+*.h5
+*.msgpack
+*.npz.index
+*.npz.data-*
+*.npz.meta
 
-# Secrets / local env
+# Partial / interrupted downloads
+*.download
+*.crdownload
+*.part
+*.tmp
+*.temp
+
+# === Secrets / local credentials ===
 .env
 .env.*
+!.env.example
 *.token
+*token*.txt
 hf_token.txt
+HF_TOKEN
+*_api_key*
+*.pem
+*.p12
+credentials.json
+secrets.json
 
-# Generated Modelfiles with absolute local paths
+# === Generated Modelfiles (often contain absolute local paths) ===
+Modelfile
 Modelfile.local
+Modelfile.*
+!config/Modelfile.coder.template
 **/Modelfile.generated
+config/Modelfile.*.generated
 
-# OS / editor
+# === Local tool / agent state under this repo ===
+.codegraph/
+graphify-out/
+.ollama/
+raw/
+
+# Keep committed agent guidance; ignore other local Continue/Cursor files
+.continue/*
+!.continue/rules/
+!.continue/rules/**
+
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+
+# === Python (huggingface_hub / headroom installs may leave caches nearby) ===
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# === PowerShell / shell noise ===
+*.ps1xml
+Transcript*.txt
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === OS / editors ===
 Thumbs.db
 Desktop.ini
 .DS_Store
+ehthumbs.db
+$RECYCLE.BIN/
 .vscode/
 .idea/
-*.log
+*.swp
+*~
