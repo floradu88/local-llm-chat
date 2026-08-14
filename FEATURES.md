@@ -39,6 +39,12 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Codegraph docs (`docs/integrations.md`)
 - [x] Trusted sources doc
 - [x] Infosec SWOT / threat boundaries (`docs/infosec-swot.md`)
+- [x] Installer download allowlist + optional SHA256 pins (`Save-RemoteFile`, `config/installer-pins.example.json`)
+- [x] `Download-FromUrl` HTTPS allowlist + `-ExpectedSha256`
+- [x] `Invoke-Elevated` constrained to repo `scripts\`
+- [x] Setup `-AirGap` mode (`Setup-Machine.ps1` / `Setup-FullLocalStack.ps1`)
+- [x] Egress hardening guide (`docs/egress-hardening.md`)
+- [x] Dependabot for GitHub Actions (`.github/dependabot.yml`)
 - [x] Agent instructions (`AGENTS.md`, Cursor/Continue rules)
 - [x] First-time-after-clone cases in README (A–O)
 - [x] Multi-model parallel + workflows (`Invoke-ParallelModels.ps1`, `Invoke-ModelWorkflow.ps1`, `docs/multi-model-workflows.md`)

@@ -1,0 +1,16 @@
+# Dependabot for local-llm-chat
+#
+# This repo is mostly PowerShell (no app package.json / Pipfile in-tree).
+# Dependabot still watches GitHub Actions if/when workflows are added.
+# For Headroom (C:\hr) and Codegraph (npm global), pin/upgrade on the machine:
+#   .\scripts\Install-Headroom.ps1 -Force
+#   .\scripts\Install-Codegraph.ps1 -ProjectPath <repo>
+# Optional installer SHA pins: copy config/installer-pins.example.json -> config/installer-pins.json
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
