@@ -46,6 +46,8 @@ Editor details: [docs/integrations.md](docs/integrations.md), Cases H/I in READM
 
 Security docs: [docs/trusted-sources.md](docs/trusted-sources.md), [docs/infosec-swot.md](docs/infosec-swot.md), [docs/egress-hardening.md](docs/egress-hardening.md), `config/installer-pins.example.json`.
 
+Law / compliance orientation (not legal advice): [LEGAL.md](LEGAL.md), [docs/ai-legal-and-compliance.md](docs/ai-legal-and-compliance.md).
+
 ## Trusted sources only
 
 Follow [docs/trusted-sources.md](docs/trusted-sources.md):

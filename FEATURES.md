@@ -39,6 +39,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Codegraph docs (`docs/integrations.md`)
 - [x] Trusted sources doc
 - [x] Infosec SWOT / threat boundaries (`docs/infosec-swot.md`)
+- [x] AI legal / compliance orientation (`LEGAL.md`, `docs/ai-legal-and-compliance.md`) — not legal advice
 - [x] Installer download allowlist + optional SHA256 pins (`Save-RemoteFile`, `config/installer-pins.example.json`)
 - [x] `Download-FromUrl` HTTPS allowlist + `-ExpectedSha256`
 - [x] `Invoke-Elevated` constrained to repo `scripts\`

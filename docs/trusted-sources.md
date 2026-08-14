@@ -79,3 +79,5 @@ Scripts **enforce** HTTPS host allowlists for `Download-FromUrl.ps1` and install
 ## License reminder
 
 Before redistributing or commercial use, read each model’s license (Qwen, DeepSeek, Llama/CodeLlama, BigCode StarCoder2, etc.).
+
+For UK/US/EU AI-regulation orientation (not legal advice), see [LEGAL.md](../LEGAL.md) and [ai-legal-and-compliance.md](ai-legal-and-compliance.md).

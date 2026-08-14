@@ -495,6 +495,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | [docs/powershell-ollama-setup.md](docs/powershell-ollama-setup.md) | Install Ollama, env vars, verify API |
 | [docs/trusted-sources.md](docs/trusted-sources.md) | Which hosts/orgs to trust |
 | [docs/infosec-swot.md](docs/infosec-swot.md) | Infosec analysis & SWOT (trust boundaries, hardening backlog) |
+| [LEGAL.md](LEGAL.md) / [docs/ai-legal-and-compliance.md](docs/ai-legal-and-compliance.md) | UK/US/EU AI usage & compliance orientation (not legal advice) |
 | [docs/egress-hardening.md](docs/egress-hardening.md) | Optional firewall / proxy / air-gap egress guidance |
 | [config/installer-pins.example.json](config/installer-pins.example.json) | Optional SHA256 pins for Ollama/Cursor/VS Code installers |
 | [docs/install-models-from-web.md](docs/install-models-from-web.md) | Ollama Library, Hugging Face, ModelScope, Modelfile |
