@@ -6,9 +6,9 @@ Use these hosts when downloading runtimes or weights. Prefer **signed / official
 
 | Source | URL | Notes |
 |--------|-----|-------|
-| **Ollama** | [ollama.com](https://ollama.com), [docs.ollama.com](https://docs.ollama.com) | Installer + Library. Per-user Windows install, no admin. |
+| **Ollama** | [ollama.com](https://ollama.com), [docs.ollama.com](https://docs.ollama.com) | Installer + Library. Per-user Windows install, no admin. Use `.\scripts\Install-Ollama.ps1` (download + optional SHA pin; no `irm\|iex`). |
 
-Do **not** install Ollama from third-party “repack” EXE sites.
+Do **not** install Ollama from third-party “repack” EXE sites. Optional pins: copy [installer-pins.example.json](../config/installer-pins.example.json) → `config/installer-pins.json`.
 
 ## Model catalogs (preferred order)
 
@@ -72,6 +72,9 @@ Smaller quants fit more context or weaker machines; larger quants improve answer
 - Unsigned torrents with no checksums
 - Unknown websites mirroring `OllamaSetup.exe`
 - Weights with no license or mismatched model cards
+- `irm … | iex` one-liners when a repo script exists (`Install-Ollama.ps1`)
+
+Scripts **enforce** HTTPS host allowlists for `Download-FromUrl.ps1` and installer downloads. Pair with [egress-hardening.md](egress-hardening.md) / `Setup-Machine.ps1 -AirGap` when policy requires locked egress.
 
 ## License reminder
 

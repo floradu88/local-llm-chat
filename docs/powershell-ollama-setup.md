@@ -35,17 +35,17 @@ $env:OLLAMA_INSTALL_DIR = "D:\Tools\Ollama"
 
 ## 2. Install Ollama
 
+Prefer the repo script (downloads `install.ps1` to disk, prints SHA256, optional pin via `config/installer-pins.json`, then runs with `powershell -File` — **not** `irm | iex`):
+
 ```powershell
 .\scripts\Install-Ollama.ps1
-```
-
-Or one-liner (official):
-
-```powershell
-irm https://ollama.com/install.ps1 | iex
+# Optional fail-closed hash:
+# .\scripts\Install-Ollama.ps1 -ExpectedSha256 "<64-hex>"
 ```
 
 Default binary location: `%LOCALAPPDATA%\Programs\Ollama` (added to your **user** PATH).
+
+See [trusted-sources.md](trusted-sources.md) and [infosec-swot.md](infosec-swot.md).
 
 ## 3. Verify
 
@@ -145,8 +145,11 @@ Settings → Apps → Ollama → Uninstall. If you set `OLLAMA_MODELS`, remove t
 - VS Code: `.\scripts\Install-VSCodeLocalAI.ps1` (Continue chat + Cline agent; alias `Install-VSCodeConfig.ps1`) then `.\scripts\Test-VSCodeSetup.ps1`
 - Local-only remotes: `.\scripts\Disable-RemoteAIProviders.ps1`
 - Headroom (optional): `.\scripts\Install-Headroom.ps1` then `.\scripts\Start-HeadroomOllama.ps1` (short venv `C:\hr`)
+- Air-gap re-wire: `.\scripts\Setup-Machine.ps1 -AirGap`
+- Egress / firewall: [egress-hardening.md](egress-hardening.md)
 - GPU: `.\scripts\Test-GpuSupport.ps1` / `.\scripts\Install-GpuDrivers.ps1`
 - Import from Hugging Face / other sources: [install-models-from-web.md](install-models-from-web.md)
 - Trusted hosts: [trusted-sources.md](trusted-sources.md)
+- Infosec SWOT: [infosec-swot.md](infosec-swot.md)
 - Editor + Headroom + Codegraph: [integrations.md](integrations.md)
 - Features checklist: [FEATURES.md](../FEATURES.md)

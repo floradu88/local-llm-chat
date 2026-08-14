@@ -45,3 +45,4 @@ What it does:
 - This toggles **editor/extension config**, not a network firewall.
 - Cursor may still show account UI; cloud models should be off in Models.
 - Reload VS Code / Cursor after running. Restart Ollama tray for cloud disable.
+- For firewall / proxy / `-AirGap` see [docs/egress-hardening.md](../docs/egress-hardening.md).

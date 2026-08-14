@@ -16,7 +16,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Three example coding models documented (Qwen2.5-Coder, DeepSeek-Coder-V2, CodeLlama)
 - [x] Ollama Library + `hf.co` download (`Download-FromOllama.ps1`)
 - [x] Hugging Face GGUF download (`Download-FromHuggingFace.ps1`)
-- [x] Direct URL download — ModelScope / GitHub (`Download-FromUrl.ps1`)
+- [x] Direct URL download — ModelScope / GitHub (`Download-FromUrl.ps1`; HTTPS allowlist + optional `-ExpectedSha256`)
 - [x] GGUF → Ollama import (`Import-GGUF.ps1`) — skips if name already exists unless `-Force`
 - [x] Coding Modelfile helper (`New-CoderModelfile.ps1`)
 - [x] Continue / VS Code chat config (`Install-ContinueConfig.ps1`) — finds Code.exe, installs Continue, writes models from `ollama list`
@@ -57,7 +57,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Uninstall / cleanup helper (`Uninstall-Ollama.ps1`)
 - [x] GPU support check non-admin + elevated (`Test-GpuSupport.ps1`) — includes VM / passthrough section
 - [x] Optional NVIDIA driver install + VM GPU guidance (`Install-GpuDrivers.ps1`)
-- [x] Elevated script launcher (`Invoke-Elevated.ps1`)
+- [x] Elevated script launcher (`Invoke-Elevated.ps1` — repo `scripts\` only)
 - [x] Admin PowerShell examples doc (`docs/powershell-admin-examples.md`)
 - [x] MIT license + README credits (`LICENSE`, README License and credits)
 
@@ -73,7 +73,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Cursor present? auto-install current user (`Install-Cursor.ps1`; `-SkipCursor` / `-ForceCursor` on setup)
 - [x] Cursor Models → Ollama via PowerShell (`Install-CursorConfig.ps1`; `-SkipCursorConfig` / `-ForceCursorConfig` on setup)
 - [x] VS Code Local AI → Ollama via PowerShell (`Install-VSCodeLocalAI.ps1`; Continue + Cline; `-SkipContinueConfig` / `-SkipClineConfig` / `-ForceContinueConfig` on setup)
-- [x] Elevate any script (`Invoke-Elevated.ps1`)
+- [x] Elevate repo scripts (`Invoke-Elevated.ps1`; constrained to `scripts\`)
 - [x] Admin examples Patterns A/B/C (`docs/powershell-admin-examples.md`)
 - [x] Sample coding eval prompts
 - [x] Multi-model parallel fan-out (`Invoke-ParallelModels.ps1`)
@@ -85,7 +85,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 
 Mark these on each machine after you run setup:
 
-- [ ] `(machine)` Ran `Setup-Machine.ps1` (or Cases A–C)
+- [ ] `(machine)` Ran `Setup-Machine.ps1` (or Cases A–C; use `-AirGap` when offline)
 - [ ] `(machine)` Pulled the three example models (or tier set) — re-runs skip if already on disk
 - [ ] `(machine)` `OLLAMA_MODELS` points at preferred disk (Case D optional)
 - [ ] `(machine)` `Test-LocalSetup.ps1` / `Show-SetupStatus.ps1` green

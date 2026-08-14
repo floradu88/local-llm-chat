@@ -113,8 +113,10 @@ SYSTEM You are a careful coding assistant for the local-llm-chat repo. Prefer co
 
 ```powershell
 .\scripts\Download-FromUrl.ps1 `
-  -Url "https://example.com/path/model.Q4_K_M.gguf" `
-  -OutDir ".\models\gguf\modelscope\my-model"
+  -Url "https://huggingface.co/.../resolve/main/model.Q4_K_M.gguf" `
+  -OutDir ".\models\gguf\modelscope\my-model" `
+  -ExpectedSha256 "<64-hex-from-model-card>"   # optional but recommended
+# HTTPS host must be allowlisted (HF / ModelScope / GitHub CDNs). -SkipAllowlist only if you trust the URL.
 # Skips if the destination file already exists; add -Force to re-download
 ```
 

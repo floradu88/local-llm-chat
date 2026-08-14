@@ -320,10 +320,17 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 
 ### Case M — ModelScope / GitHub Releases direct URL
 
+HTTPS host must be allowlisted (`Download-FromUrl.ps1`). Prefer a published checksum:
+
 ```powershell
-.\scripts\Download-FromUrl.ps1 -Url "https://.../model.Q4_K_M.gguf" -OutDir ".\models\gguf\external"
+.\scripts\Download-FromUrl.ps1 `
+  -Url "https://.../model.Q4_K_M.gguf" `
+  -OutDir ".\models\gguf\external" `
+  -ExpectedSha256 "<64-hex>"
 .\scripts\Import-GGUF.ps1 -GgufPath ".\models\gguf\external\model.Q4_K_M.gguf" -Name "external-coder"
 ```
+
+See [docs/trusted-sources.md](docs/trusted-sources.md).
 
 ---
 
@@ -501,14 +508,14 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Initialize-Codegraph.ps1` | Index a project (`codegraph init`); runs `Install-Codegraph.ps1` if CLI missing |
 | `scripts/Install-Codegraph.ps1` | fnm preferred → npm Codegraph → agent install → **Cursor + VS Code mcp.json** → init |
 
-| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + Ollama + Cursor install + pulls + Cursor/VS Code Local AI config + verify (`-Tier Auto`) |
+| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + Ollama + Cursor install + pulls + Cursor/VS Code Local AI + local-only (`-Tier Auto`; `-AirGap` for offline re-wire) |
 | `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–O (VS Code H/H-cfg/H-agent, Cursor I/I-cfg, L-vscode, GPU-DRV, …) |
 | `scripts/Invoke-ParallelModels.ps1` | Same prompt to multiple models concurrently |
 | `scripts/Invoke-ModelWorkflow.ps1` | DraftReview / PlanImplement / CompareJudge pipelines |
 | `scripts/Test-GpuSupport.ps1` | Non-admin GPU/Ollama/VM check; `-Elevated` for admin UAC driver check |
 | `scripts/Test-GpuSupport.Elevated.ps1` | Admin-only helper (pnputil / driverquery / nvidia-smi) |
 | `scripts/Install-GpuDrivers.ps1` | Optional NVIDIA drivers + VM GPU guidance (`-Install` / `-OpenDownloadPage`) |
-| `scripts/Invoke-Elevated.ps1` | Generic `Start-Process -Verb RunAs` launcher for any script |
+| `scripts/Invoke-Elevated.ps1` | UAC launcher for scripts under repo `scripts\` only (`-AllowOutsideRepo` opt-out) |
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
 | `scripts/Test-CursorOllama.ps1` | Verify Cursor Models config + OpenAI `/v1/chat/completions` smoke |
 | `scripts/Test-ContinueOllama.ps1` | Verify Continue chat config + Ollama smoke |
@@ -516,11 +523,12 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Test-VSCodeSetup.ps1` | Full VS Code Case H check (extensions, Continue, Cline via Test-ClineSetup, MCP, local-only) |
 | `scripts/Test-VSCodeOllama.ps1` | Alias for Test-VSCodeSetup.ps1 |
 | `scripts/Disable-RemoteAIProviders.ps1` | Disable remote/cloud providers for Cursor + VS Code (+ Ollama cloud) |
+| `scripts/Download-FromUrl.ps1` | Direct URL (allowlisted HTTPS hosts; optional `-ExpectedSha256`); skips existing file |
 | `scripts/Update-CodingModels.ps1` | Force re-pull / refresh tier models |
 | `scripts/Uninstall-Ollama.ps1` | Uninstall guidance + optional model cleanup |
 | `scripts/Eval-CodingModel.ps1` | Run sample coding prompts against a local model |
 | `scripts/Set-OllamaEnv.ps1` | Set `OLLAMA_MODELS` / install dir |
-| `scripts/Install-Ollama.ps1` | Official per-user install |
+| `scripts/Install-Ollama.ps1` | Official per-user install (download + SHA print / optional pin; no `irm\|iex`) |
 | `scripts/Install-ContinueConfig.ps1` | Wire Continue → Ollama (ChatGPT-like chat + autocomplete) |
 | `scripts/Install-ClineConfig.ps1` | Wire Cline → Ollama (Cursor-like agent in VS Code) |
 | `scripts/Install-VSCode.ps1` | Check/install VS Code (per-user when possible) |
@@ -530,7 +538,6 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Install-CursorConfig.ps1` | Find Cursor + wire Models → local Ollama; disable cloud models (`-KeepRemoteModels` to opt out) |
 | `scripts/Download-FromOllama.ps1` | `ollama pull` (+ `hf.co` bridge); skips if already on disk (`-Force` to re-pull) |
 | `scripts/Download-FromHuggingFace.ps1` | Download GGUF to `models/gguf` (skips existing; `-Force`) |
-| `scripts/Download-FromUrl.ps1` | Direct URL (ModelScope / GitHub Releases); skips existing file |
 | `scripts/Import-GGUF.ps1` | Register local GGUF with `ollama create` (skips existing name) |
 | `scripts/New-CoderModelfile.ps1` | Generate a coding-tuned Modelfile |
 | `scripts/Pull-CodingModels.ps1` | Opinionated pulls by RAM tier / Auto (skips installed tags) |

@@ -18,7 +18,9 @@ cd D:\code\projects\local-llm-chat   # your clone path
 notepad "$env:TEMP\ollama-gpu-report.txt"
 ```
 
-## Pattern B — elevate any script via helper
+## Pattern B — elevate a repo script via helper
+
+`Invoke-Elevated.ps1` only elevates `.ps1` files under this repo's `scripts\` directory (infosec P2). Use `-AllowOutsideRepo` only if you intentionally trust another path.
 
 ```powershell
 cd D:\code\projects\local-llm-chat
@@ -90,3 +92,4 @@ driverquery /v | Select-String "NVIDIA|nvlddmkm|BasicDisplay|Indirect"
 - Cursor install and Models config are per-user and do not need elevation (`Install-Cursor.ps1`, `Install-CursorConfig.ps1`).
 - VS Code Local AI is per-user (`Install-VSCodeLocalAI.ps1` / Continue + Cline; verify with `Test-VSCodeSetup.ps1`).
 - Headroom does **not** need admin when installed via `Install-Headroom.ps1` (`C:\hr`). Enabling Windows Long Paths (only needed for Store/user-site pip) **does** need admin — prefer the short venv instead.
+- Offline re-wire without downloads: `.\scripts\Setup-Machine.ps1 -AirGap` (see [egress-hardening.md](egress-hardening.md)).

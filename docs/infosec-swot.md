@@ -71,25 +71,25 @@ flowchart TB
 ```mermaid
 flowchart LR
   subgraph High["Higher impact if abused"]
-    A1["irm \| iex\nInstall-Ollama.ps1"]
-    A2["Invoke-Elevated.ps1\n+ ExecutionPolicy Bypass"]
+    A2["Invoke-Elevated.ps1\n+ ExecutionPolicy Bypass\n(scripts\\ only)"]
     A3["Cursor state.vscdb write"]
     A4["MCP / Cline agent tools"]
-    A5["Download-FromUrl.ps1\n(any URL)"]
+    A5["Download-FromUrl\n(-SkipAllowlist opt-out)"]
   end
 
   subgraph Med["Medium"]
-    B1["pip install headroom\n(large dep tree)"]
+    B1["pip install headroom\n(large dep tree in C:\\hr)"]
     B2["npm i -g codegraph"]
-    B3["Installer EXE download\n(Cursor/VS Code/NVIDIA)"]
+    B3["Installer EXE download\n(allowlisted + optional SHA pin)"]
     B4["HF_TOKEN / env secrets"]
   end
 
   subgraph Low["Lower / mitigated by design"]
     C1["Local-only config scripts"]
     C2[".gitignore weights/tokens"]
-    C3["trusted-sources.md guidance"]
+    C3["trusted-sources + host allowlist"]
     C4["Per-user installs (no admin default)"]
+    C5["No irm|iex; -AirGap; egress doc"]
   end
 ```
 
@@ -97,12 +97,12 @@ flowchart LR
 
 | Control / behavior | Location | Risk note |
 |--------------------|----------|-----------|
-| `irm https://ollama.com/install.ps1 \| iex` | `Install-Ollama.ps1` | Classic **remote code execution as user** if CDN/site compromised or TLS MITM with broken trust store |
-| Arbitrary URL download, no checksum | `Download-FromUrl.ps1` | Operator can fetch malicious GGUF/binary; no allowlist beyond docs |
-| UAC elevate + `-ExecutionPolicy Bypass` | `Invoke-Elevated.ps1` | Correct for drivers; dangerous if caller passes a **tampered** script path |
+| Download `install.ps1` then `powershell -File` (allowlisted host; optional SHA pin) | `Install-Ollama.ps1` | Safer than `irm\|iex`; still trusts ollama.com unless pin filled in `installer-pins.json` |
+| HTTPS host allowlist + optional `-ExpectedSha256` | `Download-FromUrl.ps1` | Rejects random mirrors by default; `-SkipAllowlist` is operator opt-out |
+| UAC elevate + `-ExecutionPolicy Bypass` (repo `scripts\` only) | `Invoke-Elevated.ps1` | Path-constrained; `-AllowOutsideRepo` required for other paths |
 | Mutates Cursor SQLite state | `Install-CursorConfig.ps1` / `_Set-CursorOllamaState.cjs` | Can redirect model traffic; backups exist for some files, not a full DB restore story |
 | Writes global MCP JSON | `Install-Codegraph.ps1` / `_common.ps1` | Spawns Node + Codegraph under editor; expands agent capability |
-| Config-only remote disable | `Disable-RemoteAIProviders.ps1` | **Not** a firewall; extensions/UI can still be re-enabled; network egress remains possible |
+| Config-only remote disable | `Disable-RemoteAIProviders.ps1` | **Not** a firewall; see [egress-hardening.md](egress-hardening.md) |
 | Loopback API checks | tests / smoke scripts | Good default; does not prove Ollama is bound only to localhost forever |
 
 ---
@@ -112,8 +112,11 @@ flowchart LR
 ### Strengths
 
 - **Local-first product intent:** Ollama + optional `OLLAMA_NO_CLOUD`, Headroom on loopback, editors pointed at `127.0.0.1` / `localhost`.
-- **Explicit remote-disable path:** `Disable-RemoteAIProviders.ps1` + checklists (`config/local-only-ai.example.md`) + tests (`Test-CursorOllama`, `Test-VSCodeSetup`).
-- **Trusted-source doctrine:** `docs/trusted-sources.md` steers away from Drive/Telegram/unsigned mirrors; AGENTS/rules reinforce “no random weights.”
+- **Explicit remote-disable path:** `Disable-RemoteAIProviders.ps1` + checklists (`config/local-only-ai.example.md`) + tests (`Test-CursorOllama`, `Test-VSCodeSetup`, `Test-ClineSetup`).
+- **Trusted-source doctrine + enforcement:** `docs/trusted-sources.md` plus HTTPS host allowlists on installer/GGUF downloads; optional SHA256 pins (`config/installer-pins.example.json`).
+- **No `irm | iex`:** Ollama bootstrap downloads to disk and runs with `-File`.
+- **`-AirGap` setup mode** and [egress-hardening.md](egress-hardening.md) for regulated networks.
+- **Elevated scripts path-constrained** to repo `scripts\`.
 - **Secret / weight hygiene in git:** `.gitignore` covers `.gguf`, tokens, `.env`, `.codegraph/`, local tool state.
 - **Least privilege by default:** per-user Ollama/Cursor/VS Code/fnm/Headroom (`C:\hr`); admin only for GPU drivers / optional elevated helpers.
 - **Config backups** before several Continue/settings mutations (`local-llm-chat-backups`).
@@ -122,23 +125,19 @@ flowchart LR
 
 ### Weaknesses
 
-- **Supply-chain soft spots:** `irm | iex` for Ollama; installer downloads without **pinned hashes**; PyPI/npm transitive deps (Headroom/litellm/transformers, Codegraph) are large and mutable.
-- **`Download-FromUrl.ps1` trust is entirely human:** no scheme/host allowlist, no SHA-256 verify, no size/type policy beyond “save file.”
+- **Supply-chain residual risk:** installer SHA pins are optional (empty by default); PyPI/npm transitive deps (Headroom/litellm/transformers, Codegraph) are large and mutable.
+- **`-SkipAllowlist` / `-AllowOutsideRepo` opt-outs** remain available to operators who bypass controls.
 - **Remote disable is soft control:** settings/state toggles, not host firewall, AppLocker, or egress proxy; Cursor account UI and future product changes can drift.
 - **High-capability local agents:** Cline/Cursor Agent + MCP can read/write files and run commands — **prompt injection** against a coding model is an infosec issue even when “local.”
-- **Privileged helpers are generic:** `Invoke-Elevated.ps1` will elevate whatever `-ScriptPath` you pass (no path allowlist to `scripts\` only).
-- **No formal threat model / SBOM / signed releases** for this toolkit’s own scripts (integrity depends on git remote trust).
+- **No formal SBOM / signed releases** for this toolkit’s own scripts (integrity depends on git remote trust).
 - **Token handling is documented, not enforced:** `HF_TOKEN` / `-Token` paths rely on operator discipline (gitignore helps if files are named conventionally).
 
 ### Opportunities
 
-- Pin **SHA-256** (or authenticode) for Ollama/Cursor/VS Code/fnm/NVIDIA artifacts; fail closed on mismatch.
-- Replace or wrap `irm | iex` with download-to-disk → hash check → `powershell -File`.
-- Add **URL allowlist** + optional checksum params to `Download-FromUrl.ps1` / HF downloads.
-- Document and optionally script **Windows Firewall** rules: allow outbound only to needed hosts; block editor egress except loopback when “air-gapped mode” is selected.
-- Add an **infosec / air-gap profile** script: local-only + no URL download + no pip/npm unless already present.
-- Path-constrain `Invoke-Elevated.ps1` to repo `scripts\` (and known elevated helpers).
-- Publish a short **operator runbook**: what data leaves the machine (telemetry toggles, model cards, MCP), what stays local.
+- Ship **filled** `installer-pins.json` for known-good Ollama/Cursor/VS Code builds (refresh on release).
+- Extend allowlist + checksum to `Download-FromHuggingFace.ps1` resolve URLs when cards publish digests.
+- Automate Windows Firewall profiles from [egress-hardening.md](egress-hardening.md) as an optional script.
+- Add pre-commit secret scanning.
 - Integrity note for GGUF: prefer HF `resolve` URLs with commit SHA; record checksums next to imports.
 
 ### Threats
@@ -176,12 +175,13 @@ flowchart TB
 | Goal | Current coverage | Gap |
 |------|------------------|-----|
 | Keep coding prompts/code off SaaS LLMs | Strong *intent* + config scripts + tests | Not enforceable against determined user or product updates |
-| Avoid untrusted model mirrors | Documented | Not enforced in `Download-FromUrl` |
-| Minimize admin | Strong default | GPU path still elevates |
+| Avoid untrusted model mirrors | Documented + HTTPS allowlist on `Download-FromUrl` | `-SkipAllowlist` / empty SHA pins still possible |
+| Minimize admin | Strong default; elevate constrained to `scripts\` | GPU path still elevates; `-AllowOutsideRepo` opt-out |
 | Protect secrets in git | Strong `.gitignore` | No pre-commit secret scanner in-repo |
-| Supply-chain for runtimes | Official HTTPS URLs | No pin/verify |
+| Supply-chain for runtimes | Official HTTPS + allowlist + optional pins | Pins empty until operator fills them |
 | Local API exposure | Scripts assume loopback | No continuous bind-address audit |
 | Agent tool safety | Out of band (user judgment) | No deny-list / sandbox for Cline |
+| Offline / regulated egress | `-AirGap` + [egress-hardening.md](egress-hardening.md) | Firewall rules not auto-applied |
 
 ---
 
@@ -217,7 +217,9 @@ Treat **local agentic coding** as still “code execution under the interactive 
 | Doc | Role |
 |-----|------|
 | [trusted-sources.md](trusted-sources.md) | Allowed download origins |
+| [egress-hardening.md](egress-hardening.md) | Firewall / proxy / air-gap egress |
 | [local-only-ai.example.md](../config/local-only-ai.example.md) | Remote-disable checklist |
+| [installer-pins.example.json](../config/installer-pins.example.json) | Optional SHA256 pins |
 | [integrations.md](integrations.md) | Editor / Headroom / Codegraph wiring |
 | [powershell-admin-examples.md](powershell-admin-examples.md) | When UAC is actually needed |
 | [AGENTS.md](../AGENTS.md) | Agent rules: no secrets/weights in git |

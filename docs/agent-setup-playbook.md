@@ -52,10 +52,10 @@ Flags:
 What `Setup-Machine.ps1` does:
 
 1. Sets `OLLAMA_MODELS` to `.\models\ollama` (User env)
-2. Installs Ollama via official script (if needed)
-3. Optional GPU drivers when `-InstallGpuDrivers`
-4. Checks Cursor; installs **current-user** build if missing (unless `-SkipCursor`)
-5. Pulls tier coding models (**skips tags already on disk**; use `Update-CodingModels.ps1` or `-Force` to refresh)
+2. Installs Ollama via official script **downloaded to disk** then run with `-File` (if needed; skipped on `-AirGap` / `-SkipInstall`)
+3. Optional GPU drivers when `-InstallGpuDrivers` (disabled under `-AirGap`)
+4. Checks Cursor; installs **current-user** build if missing (unless `-SkipCursor` / `-AirGap`)
+5. Pulls tier coding models (**skips tags already on disk**; skipped on `-AirGap` / `-SkipPull`)
 6. Wires **Cursor Models → Ollama** via `Install-CursorConfig.ps1` (unless `-SkipCursorConfig`; quit Cursor if open)
 7. Wires **VS Code Local AI** via `Install-VSCodeLocalAI.ps1` (unless `-SkipContinueConfig`) — Continue (chat) + Cline (agent)
 8. Runs `Disable-RemoteAIProviders.ps1` (Cursor catalog remotes, Continue/Cline cloud providers, Copilot/chat settings, Ollama cloud)
@@ -197,7 +197,10 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 | VS Code Local AI incomplete | `.\scripts\Install-VSCodeLocalAI.ps1 -Force` then `.\scripts\Test-VSCodeSetup.ps1` |
 | Remote/cloud models still on | Quit Cursor; `.\scripts\Disable-RemoteAIProviders.ps1` |
 | Headroom missing / long-path pip fail | `.\scripts\Install-Headroom.ps1` (uses `C:\hr`; do not `pip --user` with Store Python) |
+| URL host not allowlisted | Use HF/ModelScope/GitHub HTTPS URLs; see `docs/trusted-sources.md`; or `-ExpectedSha256` / avoid `-SkipAllowlist` |
+| Need offline re-wire | `.\scripts\Setup-Machine.ps1 -AirGap` — [egress-hardening.md](egress-hardening.md) |
 | Codegraph missing | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
+
 | VM has no GPU in guest | Expose GPU from host first; `Install-GpuDrivers.ps1` explains this |
 | No admin / policy blocks EXE | Document block; user must allow OllamaSetup / CursorSetup or use IT whitelist |
 
@@ -207,4 +210,5 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 - [FEATURES.md](../FEATURES.md) - shipped features + per-machine checklist
 - [AGENTS.md](../AGENTS.md) - how agents should behave in this repo
 - [powershell-ollama-setup.md](powershell-ollama-setup.md) - detailed install
+- [trusted-sources.md](trusted-sources.md) / [infosec-swot.md](infosec-swot.md) / [egress-hardening.md](egress-hardening.md) - download trust + hardening
 - Scripts under `../scripts/` - do not reinvent installers
