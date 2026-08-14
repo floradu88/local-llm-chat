@@ -24,7 +24,7 @@
   (falls back to the three README examples if none found).
 
 .PARAMETER Headroom
-  Shortcut: BaseUrl = http://127.0.0.1:8787/v1 (requires Start-HeadroomOllama.ps1).
+  Shortcut: BaseUrl = http://127.0.0.1:8787/v1 (requires Install-Headroom.ps1 + Start-HeadroomOllama.ps1).
 
 .PARAMETER SetAsDefault
   Set Composer / Cmd-K / plan / quick-agent selection to the first model.

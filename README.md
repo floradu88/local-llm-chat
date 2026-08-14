@@ -212,7 +212,7 @@ See [config/local-only-ai.example.md](config/local-only-ai.example.md).
 .\scripts\Install-CursorConfig.ps1
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
 .\scripts\Test-CursorOllama.ps1          # config + /v1/chat/completions smoke
-# .\scripts\Install-CursorConfig.ps1 -Headroom   # after Start-HeadroomOllama.ps1
+# .\scripts\Install-CursorConfig.ps1 -Headroom   # after Install-Headroom + Start-HeadroomOllama
 ```
 
 That sets base URL `http://localhost:11434/v1`, API key `ollama`, enables tags from `ollama list`, and **disables Cursor cloud/catalog models** (use `-KeepRemoteModels` to leave them on). Restart Cursor afterward.
@@ -223,8 +223,11 @@ Manual UI fallback: Settings → Models with the same URL/key. Checklist: [confi
 
 ### Case J — Headroom in front of Ollama (optional)
 
+Uses a **short-path venv** at `C:\hr` (no admin). Avoid `pip install --user` with Microsoft Store Python — `litellm` hits Windows path-length limits unless Long Paths are enabled (admin).
+
 ```powershell
-.\scripts\Start-HeadroomOllama.ps1
+.\scripts\Install-Headroom.ps1          # once: creates C:\hr + installs headroom-ai[proxy]
+.\scripts\Start-HeadroomOllama.ps1      # auto-installs into C:\hr if missing
 ```
 
 Then point Cursor/clients at Headroom:
@@ -236,6 +239,8 @@ Then point Cursor/clients at Headroom:
 ```
 
 Or set base URL `http://127.0.0.1:8787/v1` (key still `ollama`) in the UI. Leave the Headroom terminal open while using it.
+
+If install still fails with long-path errors, either keep using `C:\hr`, or (with admin) enable Long Paths: https://pip.pypa.io/warnings/enable-long-paths
 
 ---
 
@@ -274,6 +279,7 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 .\scripts\Install-ClineConfig.ps1 -CheckOnly
 .\scripts\Test-VSCodeSetup.ps1
 # alias: .\scripts\Test-VSCodeOllama.ps1
+.\scripts\Install-Headroom.ps1 -CheckOnly
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
 .\scripts\Test-CursorOllama.ps1
 .\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
@@ -291,6 +297,7 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 | L-vscode red | `.\scripts\Test-VSCodeSetup.ps1` (script missing) or re-run LocalAI |
 | Remote models still on | Quit Cursor; `.\scripts\Disable-RemoteAIProviders.ps1` |
 | I-cfg red (Cursor Models) | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
+| J red (Headroom) | `.\scripts\Install-Headroom.ps1` (short venv `C:\hr`; avoid Store Python `pip --user`) |
 | K / K-cli / K-node red (Codegraph) | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (fnm preferred) |
 
 ---
@@ -507,7 +514,8 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Import-GGUF.ps1` | Register local GGUF with `ollama create` (skips existing name) |
 | `scripts/New-CoderModelfile.ps1` | Generate a coding-tuned Modelfile |
 | `scripts/Pull-CodingModels.ps1` | Opinionated pulls by RAM tier / Auto (skips installed tags) |
-| `scripts/Start-HeadroomOllama.ps1` | Headroom proxy → Ollama `/v1` |
+| `scripts/Install-Headroom.ps1` | Short-path venv (`C:\hr`) + `headroom-ai[proxy]` (avoids long-path pip failures) |
+| `scripts/Start-HeadroomOllama.ps1` | Headroom proxy → Ollama `/v1` (uses `C:\hr` or PATH) |
 | `scripts/_common.ps1` | Shared helpers (dot-sourced; not run alone) |
 
 ## License and credits

@@ -32,7 +32,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Cursor → Ollama Models config from PowerShell (`Install-CursorConfig.ps1`; finds install + writes `state.vscdb`; disables cloud/catalog models unless `-KeepRemoteModels`)
 - [x] Cursor → Ollama integration test (`Test-CursorOllama.ps1`; config + `/v1/chat/completions` smoke)
 - [x] Cursor checklist (`config/cursor-openai-local.example.md`)
-- [x] Headroom → Ollama proxy (`Start-HeadroomOllama.ps1`)
+- [x] Headroom → Ollama proxy (`Install-Headroom.ps1` short venv `C:\hr` + `Start-HeadroomOllama.ps1`)
 - [x] Codegraph install + init (`Install-Codegraph.ps1` — **fnm preferred**, system npm fallback; Cursor + VS Code **mcp.json**; agent install; `codegraph init`; `Initialize-Codegraph.ps1`)
 - [x] Codegraph MCP checklist (`config/codegraph-mcp.example.md`)
 - [x] Codegraph docs (`docs/integrations.md`)
@@ -84,7 +84,7 @@ Mark these on each machine after you run setup:
 - [ ] `(machine)` VS Code Local AI configured (`Test-VSCodeSetup.ps1` / Case H — Continue chat + Cline agent; alias `Test-VSCodeOllama.ps1`)
 - [ ] `(machine)` Cursor installed (`Install-Cursor.ps1 -CheckOnly`) + Models → Ollama (`Test-CursorOllama.ps1`; Case I)
 - [ ] `(machine)` Remotes disabled (`Disable-RemoteAIProviders.ps1 -CheckOnly`)
-- [ ] `(machine)` Headroom installed if desired (Case J)
+- [ ] `(machine)` Headroom installed if desired (`Install-Headroom.ps1` / Case J — short venv `C:\hr`)
 - [ ] `(machine)` Codegraph CLI + index + MCP (`Install-Codegraph.ps1 -CheckOnly -ProjectPath <repo>`; Case K; fnm preferred)
 - [ ] `(machine)` GPU check run (`Test-GpuSupport.ps1`; `-Elevated` optional)
 - [ ] `(machine)` GPU drivers if needed (`Install-GpuDrivers.ps1`; VM needs passthrough first)
@@ -97,6 +97,7 @@ Mark these on each machine after you run setup:
 # alias: .\scripts\Test-VSCodeOllama.ps1
 .\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
 .\scripts\Install-Codegraph.ps1 -CheckOnly
+.\scripts\Install-Headroom.ps1 -CheckOnly
 .\scripts\Test-GpuSupport.ps1
 .\scripts\Install-GpuDrivers.ps1
 ```
@@ -113,6 +114,6 @@ Mark these on each machine after you run setup:
 ## How to use
 
 1. After clone: README Cases, or `.\scripts\Setup-Machine.ps1 -Tier Auto` (Cursor install + Cursor/VS Code Ollama config unless skipped)
-2. Optional: `-InstallGpuDrivers` / three example models from README
-3. `.\scripts\Show-SetupStatus.ps1` until core rows are green (including H/H-cfg/H-agent, I/I-cfg, L-vscode)
+2. Optional: `-InstallGpuDrivers` / three example models from README / Case J Headroom (`Install-Headroom.ps1`)
+3. `.\scripts\Show-SetupStatus.ps1` until core rows are green (including H/H-cfg/H-agent, I/I-cfg, L-vscode; J when using Headroom)
 4. Tick **Machine checklist** items on that PC

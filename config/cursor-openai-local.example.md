@@ -16,7 +16,7 @@ Quit Cursor, then:
 ```powershell
 .\scripts\Install-CursorConfig.ps1
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
-# Via Headroom proxy:
+# Via Headroom proxy (after Install-Headroom + Start-HeadroomOllama):
 # .\scripts\Install-CursorConfig.ps1 -Headroom
 # Keep Cursor cloud models enabled (opt out of local-only):
 # .\scripts\Install-CursorConfig.ps1 -KeepRemoteModels
@@ -60,7 +60,7 @@ ollama list
 
 ## Via Headroom
 
-1. Run `.\scripts\Start-HeadroomOllama.ps1` from this repo.
+1. Run `.\scripts\Install-Headroom.ps1` then `.\scripts\Start-HeadroomOllama.ps1` from this repo (short venv `C:\hr`).
 2. `.\scripts\Install-CursorConfig.ps1 -Headroom` **or** set Base URL `http://127.0.0.1:8787/v1` in the UI.
 3. API key: `ollama`
 4. Same model tag as above.

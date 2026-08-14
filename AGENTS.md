@@ -37,7 +37,7 @@ cd <repo-root>
 7. Local-only: `.\scripts\Disable-RemoteAIProviders.ps1` (disables Cursor catalog remotes, Continue/Cline cloud providers, Copilot/built-in chat, Ollama cloud)
 8. `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1` / `.\scripts\Test-CursorOllama.ps1` / `.\scripts\Test-VSCodeSetup.ps1`
 9. Optional: `.\scripts\Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` (VM needs host GPU passthrough first)
-10. Optional: `.\scripts\Start-HeadroomOllama.ps1` then `Install-CursorConfig.ps1 -Headroom` and/or `Install-VSCodeLocalAI.ps1 -Headroom -Force`
+10. Optional: `.\scripts\Install-Headroom.ps1` then `.\scripts\Start-HeadroomOllama.ps1` then `Install-CursorConfig.ps1 -Headroom` and/or `Install-VSCodeLocalAI.ps1 -Headroom -Force`
 11. Optional: `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (**fnm preferred**; updates **Cursor + VS Code mcp.json**; system npm only if fnm fails → agent install → `codegraph init`)
 
 One-shot: `.\scripts\Setup-Machine.ps1` (env + Ollama + Cursor install + pulls + **Cursor config** + **VS Code Local AI** + **Disable-RemoteAIProviders** + verify). Use `-SkipCursor` / `-SkipCursorConfig` / `-SkipContinueConfig` / `-SkipClineConfig` / `-InstallGpuDrivers` as needed.
@@ -62,6 +62,7 @@ Do not fetch models from random Drive/Telegram/unsigned mirrors.
 - Cursor: `Install-Cursor.ps1` then quit Cursor and `Install-CursorConfig.ps1`.
 - VS Code: `Install-VSCodeLocalAI.ps1` (Continue chat + Cline agent); or Continue-only / Cline-only scripts.
 - Local-only remotes: `Disable-RemoteAIProviders.ps1` (OpenAI/Cursor/Grok/Copilot/etc.).
+- Headroom (optional): `Install-Headroom.ps1` then `Start-HeadroomOllama.ps1` (short venv `C:\hr`; avoid Store Python `pip --user`).
 - Point them at [docs/integrations.md](docs/integrations.md) and the config checklists under `config/`.
 - For Hugging Face GGUF: `Download-FromHuggingFace.ps1` then `Import-GGUF.ps1` (both skip if already present unless `-Force`).
 - For ModelScope/GitHub URL: `Download-FromUrl.ps1` then `Import-GGUF.ps1`.

@@ -38,6 +38,8 @@ Notable helpers:
 - `Disable-RemoteAIProviders.ps1` — block OpenAI/Cursor/Grok/Copilot/etc. for Cursor + VS Code (+ Ollama cloud)
 - `Install-ContinueConfig.ps1` / `Install-ClineConfig.ps1` — pieces of Case H
 - `Install-Codegraph.ps1` — **fnm preferred** → npm Codegraph → agent install → **Cursor + VS Code mcp.json** → `codegraph init`; system npm only if fnm fails (`-RequireFnm` / `-SkipFnm` / `-WriteWorkspaceMcp`)
+- `Install-Headroom.ps1` — short-path venv `C:\hr` + `headroom-ai[proxy]` (avoids Store Python / long-path pip failures; no admin)
+- `Start-HeadroomOllama.ps1` — proxy on :8787 → Ollama `/v1` (auto-installs into `C:\hr` if missing)
 - `Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` — GPU + VM guidance
 - Pull/download scripts skip models already on disk unless `-Force` (or `Update-CodingModels.ps1`)
 

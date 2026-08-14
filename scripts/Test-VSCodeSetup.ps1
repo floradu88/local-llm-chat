@@ -246,7 +246,7 @@ if (-not $SkipCline) {
       } catch {
         Write-Check "FAIL" ("Cline path smoke failed: {0}" -f $_)
         if ($root -match "8787") {
-          Write-Host "     Tip: .\scripts\Start-HeadroomOllama.ps1"
+          Write-Host "     Tip: .\scripts\Install-Headroom.ps1 then .\scripts\Start-HeadroomOllama.ps1"
         }
         $failed++
       }

@@ -89,3 +89,4 @@ driverquery /v | Select-String "NVIDIA|nvlddmkm|BasicDisplay|Indirect"
 - VMs need a host-exposed NVIDIA device before guest driver install helps — see `Install-GpuDrivers.ps1`.
 - Cursor install and Models config are per-user and do not need elevation (`Install-Cursor.ps1`, `Install-CursorConfig.ps1`).
 - VS Code Local AI is per-user (`Install-VSCodeLocalAI.ps1` / Continue + Cline; verify with `Test-VSCodeSetup.ps1`).
+- Headroom does **not** need admin when installed via `Install-Headroom.ps1` (`C:\hr`). Enabling Windows Long Paths (only needed for Store/user-site pip) **does** need admin — prefer the short venv instead.

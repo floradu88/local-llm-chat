@@ -45,9 +45,12 @@ Reload VS Code → open Cline → Provider **Ollama**, Context Window ≥ 32k.
 ## Headroom
 
 ```powershell
+.\scripts\Install-Headroom.ps1              # once: C:\hr short venv (no admin)
 .\scripts\Start-HeadroomOllama.ps1
 .\scripts\Install-VSCodeLocalAI.ps1 -Headroom -Force
 ```
+
+Avoid `pip install --user "headroom-ai[proxy]"` with Microsoft Store Python (long-path / litellm failures).
 
 ## Manual marketplace IDs
 

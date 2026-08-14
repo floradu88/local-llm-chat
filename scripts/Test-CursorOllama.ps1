@@ -169,7 +169,7 @@ if ($SkipSmoke) {
   } catch {
     Write-Check "FAIL" ("chat/completions smoke failed: {0}" -f $_)
     if ($base -match "8787") {
-      Write-Host "     Tip: start Headroom first - .\scripts\Start-HeadroomOllama.ps1"
+      Write-Host "     Tip: .\scripts\Install-Headroom.ps1 then .\scripts\Start-HeadroomOllama.ps1"
     }
     $failed++
   }

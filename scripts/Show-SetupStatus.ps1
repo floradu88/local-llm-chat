@@ -105,10 +105,11 @@ if ($cursorInfo.Installed) {
 }
 
 # J Headroom
-if (Get-Command headroom -ErrorAction SilentlyContinue) {
-  Write-Check "J" "OK" "headroom CLI on PATH"
+$hrExe = Resolve-HeadroomExe
+if ($hrExe) {
+  Write-Check "J" "OK" ("headroom: {0}" -f $hrExe)
 } else {
-  Write-Check "J" "WARN" "headroom not installed (optional) - Start-HeadroomOllama.ps1"
+  Write-Check "J" "WARN" "headroom not installed (optional) - .\scripts\Install-Headroom.ps1"
 }
 
 # K Codegraph

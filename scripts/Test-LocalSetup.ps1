@@ -78,5 +78,5 @@ if ($failed -gt 0) {
   exit 1
 }
 Write-Host "RESULT: OK - local setup looks ready."
-Write-Host "Next: README Cases H/I (editor), J (Headroom), K (Codegraph)."
+Write-Host "Next: README Cases H/I (editor), J (Headroom: Install-Headroom.ps1), K (Codegraph)."
 exit 0

@@ -150,7 +150,7 @@ Keep `codegraph` MCP enabled; ask the agent to use Codegraph tools first, then g
 
 Headroom compresses context; it does **not** replace a second model. Pattern:
 
-1. `.\scripts\Start-HeadroomOllama.ps1`  
+1. `.\scripts\Install-Headroom.ps1` then `.\scripts\Start-HeadroomOllama.ps1` (short venv `C:\hr`; avoid Store Python `pip --user`)  
 2. Point editors at Headroom:
 
 ```powershell
@@ -206,6 +206,7 @@ Run several of these in `Start-Job` / `ForEach-Object -Parallel` (PowerShell 7+)
 - Continue multi-model config: `config/continue.config.example.json`
 - Cursor install + Models config: `Install-Cursor.ps1`, `Install-CursorConfig.ps1`, `config/cursor-openai-local.example.md`
 - VS Code Local AI: `Install-VSCodeLocalAI.ps1` / `Test-VSCodeSetup.ps1` (`config/vscode-ollama-local.example.md`)
+- Headroom: `Install-Headroom.ps1` / `Start-HeadroomOllama.ps1` (short venv `C:\hr`)
 - Editor integrations overview: [integrations.md](integrations.md)
 - Scripts: `Invoke-ParallelModels.ps1`, `Invoke-ModelWorkflow.ps1`
 - Features: [FEATURES.md](../FEATURES.md)

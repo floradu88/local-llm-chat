@@ -11,7 +11,8 @@ When the user asks to set up local models or this project on a machine:
 4. If editors were skipped or failed: `.\scripts\Install-VSCodeLocalAI.ps1 -Force` and/or quit Cursor then `.\scripts\Install-CursorConfig.ps1`. See `docs/integrations.md`.
 5. Local-only remotes: `.\scripts\Disable-RemoteAIProviders.ps1` (quit Cursor first). Checklist: `config/local-only-ai.example.md`.
 6. Optional GPU: `.\scripts\Test-GpuSupport.ps1` / `.\scripts\Install-GpuDrivers.ps1`.
-7. Optional Codegraph: `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (fnm preferred; updates Cursor + VS Code mcp.json; system npm only if fnm fails).
+7. Optional Headroom: `.\scripts\Install-Headroom.ps1` then `.\scripts\Start-HeadroomOllama.ps1` (short venv `C:\hr`; avoid `pip --user` with Store Python).
+8. Optional Codegraph: `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (fnm preferred; updates Cursor + VS Code mcp.json; system npm only if fnm fails).
 
 Pulls and GGUF downloads skip files/tags already on disk; use `-Force` or `Update-CodingModels.ps1` to refresh.
 

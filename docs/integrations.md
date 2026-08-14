@@ -60,6 +60,7 @@ Reload VS Code → Cline → Provider **Ollama**, Context Window ≥ **32k**.
 ### Headroom (both)
 
 ```powershell
+.\scripts\Install-Headroom.ps1              # once: short venv C:\hr (avoids long-path pip failures)
 .\scripts\Start-HeadroomOllama.ps1
 .\scripts\Install-VSCodeLocalAI.ps1 -Headroom -Force
 ```
@@ -113,9 +114,10 @@ See [config/cursor-openai-local.example.md](../config/cursor-openai-local.exampl
 
 ### Via Headroom (context compression)
 
-1. Start the proxy:
+1. Install (short venv `C:\hr`) and start the proxy:
 
 ```powershell
+.\scripts\Install-Headroom.ps1
 .\scripts\Start-HeadroomOllama.ps1
 ```
 
@@ -130,24 +132,26 @@ Traffic: Cursor → Headroom → Ollama. Headroom shrinks tool/context payload s
 
 ## Headroom → Ollama
 
-Install (user site, no admin if pip allows):
+**Preferred (no admin):** short venv at `C:\hr` — Store/user-site pip often fails because `litellm` exceeds Windows MAX_PATH without Long Paths (admin).
 
 ```powershell
-pip install --user "headroom-ai[proxy]"
-```
-
-Start:
-
-```powershell
+.\scripts\Install-Headroom.ps1              # creates C:\hr, installs headroom-ai[proxy]
 .\scripts\Start-HeadroomOllama.ps1 -Port 8787
 # Internally aims OpenAI-compatible traffic at http://127.0.0.1:11434/v1
 ```
 
-Manual:
+Avoid on Store Python:
+
+```powershell
+# Often fails: OSError / long path under litellm\proxy\guardrails\...
+pip install --user "headroom-ai[proxy]"
+```
+
+Manual (after Install-Headroom):
 
 ```powershell
 $env:OPENAI_TARGET_API_URL = "http://127.0.0.1:11434/v1"
-headroom proxy --port 8787 --openai-api-url http://127.0.0.1:11434/v1
+C:\hr\Scripts\headroom.exe proxy --port 8787 --openai-api-url http://127.0.0.1:11434/v1
 ```
 
 Health check:
@@ -221,7 +225,7 @@ Restart **Cursor** and **VS Code** after `Install-Codegraph.ps1` so MCP reloads 
 ## Suggested daily loop
 
 1. Ollama tray / `ollama serve` running.
-2. Optional: `.\scripts\Start-HeadroomOllama.ps1`, then `Install-CursorConfig.ps1 -Headroom` and/or `Install-VSCodeLocalAI.ps1 -Headroom -Force`.
+2. Optional: `.\scripts\Install-Headroom.ps1` then `.\scripts\Start-HeadroomOllama.ps1`, then `Install-CursorConfig.ps1 -Headroom` and/or `Install-VSCodeLocalAI.ps1 -Headroom -Force`.
 3. VS Code Local AI **or** Cursor already wired (`Install-VSCodeLocalAI.ps1` / `Install-CursorConfig.ps1`).
 4. Codegraph MCP available after `codegraph init` in the project.
 
@@ -239,7 +243,8 @@ Restart **Cursor** and **VS Code** after `Install-Codegraph.ps1` so MCP reloads 
 | Remote/cloud models still available | `.\scripts\Disable-RemoteAIProviders.ps1` (quit Cursor first) |
 | Wrong model name | Must match `ollama list` exactly |
 | Pull downloaded again | Scripts skip by default; unexpected re-pull → check tag / use manifests; intentional refresh → `-Force` |
-| Headroom 502 / empty | Ollama up; URL ends with `/v1` for OpenAI path |
+| Headroom CLI missing / long-path pip fail | `.\scripts\Install-Headroom.ps1` (short venv `C:\hr`; avoid `pip --user` with Store Python) |
+| Headroom 502 / empty | Ollama up; URL ends with `/v1` for OpenAI path; proxy running on :8787 |
 | Out of memory | Smaller tag/quant; `ollama stop <model>`; close other GPU apps |
 | GPU unused / VM | `.\scripts\Test-GpuSupport.ps1` and `.\scripts\Install-GpuDrivers.ps1` |
 | Codegraph empty / CLI missing | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |

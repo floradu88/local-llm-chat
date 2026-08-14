@@ -209,7 +209,7 @@ Write-Host "Local-only: .\scripts\Disable-RemoteAIProviders.ps1"
 Write-Host "Codegraph: .\scripts\Install-Codegraph.ps1 -ProjectPath <repo>  (fnm preferred; system npm fallback)"
 Write-Host "GPU check: .\scripts\Test-GpuSupport.ps1"
 if (-not $SkipHeadroomHint) {
-  Write-Host "Headroom: .\scripts\Start-HeadroomOllama.ps1  then Install-CursorConfig / Install-VSCodeLocalAI -Headroom"
+  Write-Host "Headroom: .\scripts\Install-Headroom.ps1  then .\scripts\Start-HeadroomOllama.ps1  then Install-CursorConfig / Install-VSCodeLocalAI -Headroom"
 }
 Write-Host ""
 Write-Host "Agent playbook: docs\agent-setup-playbook.md"

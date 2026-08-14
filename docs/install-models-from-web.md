@@ -168,4 +168,4 @@ Wire editors (finds installs + writes config):
 .\scripts\Install-CursorConfig.ps1     # quit Cursor first
 ```
 
-Also: Codegraph / Headroom — [integrations.md](integrations.md).
+Also: Codegraph / Headroom — [integrations.md](integrations.md) (`Install-Headroom.ps1` → `Start-HeadroomOllama.ps1`).

@@ -131,7 +131,10 @@ A **VM** can use a GPU with Ollama only if the guest already sees an NVIDIA devi
 
 ## Step 5 — optional Headroom
 
+Uses short-path venv `C:\hr` (avoids Windows long-path / Store Python pip failures; no admin):
+
 ```powershell
+.\scripts\Install-Headroom.ps1
 .\scripts\Start-HeadroomOllama.ps1
 .\scripts\Install-CursorConfig.ps1 -Headroom
 .\scripts\Install-VSCodeLocalAI.ps1 -Headroom -Force
@@ -176,7 +179,7 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 - [ ] Remotes disabled (`Disable-RemoteAIProviders.ps1 -CheckOnly`)
 - [ ] (Optional) Codegraph: `Install-Codegraph.ps1 -CheckOnly -ProjectPath <repo>`
 - [ ] (Optional) GPU checked / drivers installed
-- [ ] (Optional) Headroom on 8787 (`Install-CursorConfig.ps1 -Headroom` / `Install-VSCodeLocalAI.ps1 -Headroom`)
+- [ ] (Optional) Headroom on 8787 (`Install-Headroom.ps1` / `Start-HeadroomOllama.ps1`, then `Install-CursorConfig.ps1 -Headroom` / `Install-VSCodeLocalAI.ps1 -Headroom`)
 
 ## Failure handling
 
@@ -191,6 +194,7 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 | Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
 | VS Code Local AI incomplete | `.\scripts\Install-VSCodeLocalAI.ps1 -Force` then `.\scripts\Test-VSCodeSetup.ps1` |
 | Remote/cloud models still on | Quit Cursor; `.\scripts\Disable-RemoteAIProviders.ps1` |
+| Headroom missing / long-path pip fail | `.\scripts\Install-Headroom.ps1` (uses `C:\hr`; do not `pip --user` with Store Python) |
 | Codegraph missing | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
 | VM has no GPU in guest | Expose GPU from host first; `Install-GpuDrivers.ps1` explains this |
 | No admin / policy blocks EXE | Document block; user must allow OllamaSetup / CursorSetup or use IT whitelist |

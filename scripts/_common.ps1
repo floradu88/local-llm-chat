@@ -1149,6 +1149,102 @@ function Add-PythonUserScriptsToPath {
   }
 }
 
+function Get-DefaultHeadroomVenvPath {
+  return "C:\hr"
+}
+
+function Resolve-HeadroomExe {
+  param([string] $VenvPath = "")
+
+  if (-not $VenvPath) {
+    $VenvPath = Get-DefaultHeadroomVenvPath
+  }
+
+  $candidates = @(
+    (Join-Path $VenvPath "Scripts\headroom.exe")
+    (Join-Path $VenvPath "Scripts\headroom")
+  )
+
+  Add-PythonUserScriptsToPath
+  $cmd = Get-Command headroom -ErrorAction SilentlyContinue
+  if ($cmd -and $cmd.Source) {
+    $candidates = @($cmd.Source) + $candidates
+  }
+
+  $userScripts = Get-PythonUserScriptsPath
+  if ($userScripts) {
+    $candidates += (Join-Path $userScripts "headroom.exe")
+  }
+
+  foreach ($c in $candidates) {
+    if ($c -and (Test-Path -LiteralPath $c)) {
+      return (Resolve-Path -LiteralPath $c).Path
+    }
+  }
+  return $null
+}
+
+function Ensure-HeadroomShortVenv {
+  param(
+    [string] $VenvPath = "C:\hr",
+    [switch] $ForceReinstall
+  )
+
+  $py = Get-Command python -ErrorAction SilentlyContinue
+  if (-not $py) {
+    throw "python not found. Install Python 3.11+ from https://www.python.org/downloads/ (or Microsoft Store) and reopen the terminal."
+  }
+
+  $venvPython = Join-Path $VenvPath "Scripts\python.exe"
+  $headroomExe = Join-Path $VenvPath "Scripts\headroom.exe"
+
+  if ($ForceReinstall -and (Test-Path -LiteralPath $VenvPath)) {
+    Write-Host "Removing existing venv: $VenvPath"
+    Remove-Item -LiteralPath $VenvPath -Recurse -Force
+  }
+
+  if (-not (Test-Path -LiteralPath $venvPython)) {
+    Write-Host "Creating short-path Headroom venv at $VenvPath (avoids Windows path-length limits)..."
+    $parent = Split-Path -Parent $VenvPath
+    if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+      New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+    & python -m venv $VenvPath | Out-Host
+    if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null -and -not (Test-Path -LiteralPath $venvPython)) {
+      throw "Failed to create venv at $VenvPath. Pick a short writable path (e.g. C:\hr)."
+    }
+    if (-not (Test-Path -LiteralPath $venvPython)) {
+      throw "Failed to create venv at $VenvPath. Pick a short writable path (e.g. C:\hr)."
+    }
+  }
+
+  if (-not (Test-Path -LiteralPath $headroomExe) -or $ForceReinstall) {
+    Write-Host "Installing headroom-ai[proxy] into $VenvPath ..."
+    Write-Host "(Store/user-site installs often fail on Windows without long-path support; short venv avoids that.)"
+    & $venvPython -m pip install --upgrade pip | Out-Host
+    if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
+      Write-Warning "pip upgrade returned exit $LASTEXITCODE (continuing)"
+    }
+    & $venvPython -m pip install "headroom-ai[proxy]" | Out-Host
+    if (-not (Test-Path -LiteralPath $headroomExe)) {
+      throw @"
+headroom install failed in $VenvPath.
+If you saw 'Windows Long Path support' / OSError Errno 2 under litellm:
+  - Prefer this short venv (C:\hr) — do not use pip --user with Store Python.
+  - Or enable long paths (admin): https://pip.pypa.io/warnings/enable-long-paths
+Also ensure Python Scripts are reachable; this script uses $VenvPath\Scripts\headroom.exe directly.
+"@
+    }
+  }
+
+  $scriptsDir = Join-Path $VenvPath "Scripts"
+  if ($env:Path -notlike "*$scriptsDir*") {
+    $env:Path = "$scriptsDir;$env:Path"
+  }
+
+  return (Resolve-Path -LiteralPath $headroomExe).Path
+}
+
 function Get-SystemRamGB {
   try {
     $cs = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
