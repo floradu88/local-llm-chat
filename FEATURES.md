@@ -37,6 +37,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Codegraph MCP checklist (`config/codegraph-mcp.example.md`)
 - [x] Codegraph docs (`docs/integrations.md`)
 - [x] Trusted sources doc
+- [x] Infosec SWOT / threat boundaries (`docs/infosec-swot.md`)
 - [x] Agent instructions (`AGENTS.md`, Cursor/Continue rules)
 - [x] First-time-after-clone cases in README (A–O)
 - [x] Multi-model parallel + workflows (`Invoke-ParallelModels.ps1`, `Invoke-ModelWorkflow.ps1`, `docs/multi-model-workflows.md`)
