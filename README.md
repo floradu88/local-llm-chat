@@ -8,6 +8,7 @@ Model weights are **not** in git. After clone you install Ollama and download mo
 
 **Author:** [Radu Florescu](https://github.com/floradu88) · **Repo:** [floradu88/local-llm-chat](https://github.com/floradu88/local-llm-chat) · **License:** [MIT](LICENSE) (use as-is; keep the copyright notice for credit)
 
+**AI law / compliance (UK·US·EU):** [LEGAL.md](LEGAL.md) — local coding LLMs are not generally banned; respect **model licences** and data rules. Detail: [docs/ai-legal-and-compliance.md](docs/ai-legal-and-compliance.md).
 
 ## First time after `git clone`
 
