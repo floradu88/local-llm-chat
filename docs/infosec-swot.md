@@ -189,8 +189,8 @@ flowchart TB
 
 1. **P0 — Document operator threat model** (this file) and link from README — **done**.
 2. **P1 — Hash-verify installers**; stop raw `irm | iex` where practical — **done**.
-3. **P1 — Allowlist + checksum** on `Download-FromUrl.ps1` — **done** (HTTPS host allowlist + `-ExpectedSha256`).
-4. **P2 — Constrain `Invoke-Elevated.ps1`** to `scripts\*.ps1` under the repo root — pending.
+3. **P1 — Allowlist + checksum** on `Download-FromUrl.ps1` — **done**.
+4. **P2 — Constrain `Invoke-Elevated.ps1`** to `scripts\*.ps1` under the repo root — **done** (`-AllowOutsideRepo` opt-out only).
 5. **P2 — Optional “air-gap” switch** on setup — pending.
 6. **P3 — Egress guidance** (firewall / proxy) for regulated environments — pending.
 7. **P3 — Dependabot/renovate or lockfiles** — pending.
