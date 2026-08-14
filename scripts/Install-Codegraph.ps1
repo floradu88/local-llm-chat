@@ -1,16 +1,19 @@
 ﻿<#
 .SYNOPSIS
-  Install Codegraph via fnm + Node (no admin), wire agents, then init a project graph.
+  Install Codegraph via fnm (preferred) + Node, wire agents, then init a project graph.
 
 .DESCRIPTION
   Ordered Windows flow matching this toolkit:
 
-  1) Ensure fnm (Fast Node Manager) - per-user, no admin when possible
-  2) Ensure Node LTS through fnm; npm i -g @colbymchenry/codegraph
+  1) Prefer fnm (Fast Node Manager) for Node/npm - install fnm if needed (no admin)
+     Fall back to system node/npm ONLY if fnm fails (unless -RequireFnm)
+  2) npm i -g @colbymchenry/codegraph (using the preferred Node from step 1)
   3) codegraph install --yes --no-permissions   (wire MCP first without agent auto-allow)
   4) codegraph install --yes                    (second pass WITH agent permissions)
      Optional: -Elevated runs step 4 via UAC (Invoke-Elevated.ps1)
-  5) codegraph init in -ProjectPath if .codegraph is missing (or -ForceInit)
+  5) Update MCP JSON for Cursor (~/.cursor/mcp.json) and VS Code (%APPDATA%\Code\User\mcp.json)
+     Prefer fnm default node.exe + npm-shim so GUI editors work without shell PATH
+  6) codegraph init in -ProjectPath if .codegraph is missing (or -ForceInit)
 
 .PARAMETER ProjectPath
   Repo to index (default: this toolkit repo). Skips init when .codegraph already exists unless -ForceInit.
@@ -22,10 +25,19 @@
   codegraph install --target value (default: cursor). Use auto|all|cursor,claude|...
 
 .PARAMETER SkipFnm
-  Assume Node/npm already usable; skip fnm install/use.
+  Use system Node/npm only (do not try fnm). Not recommended.
+
+.PARAMETER RequireFnm
+  Fail if fnm cannot provide Node (do not fall back to system npm).
 
 .PARAMETER SkipAgentInstall
   Skip both codegraph install passes (CLI + init only).
+
+.PARAMETER SkipMcpJson
+  Do not write/merge ~/.cursor/mcp.json and VS Code User/mcp.json.
+
+.PARAMETER WriteWorkspaceMcp
+  Also write portable .cursor/mcp.json and .vscode/mcp.json under -ProjectPath.
 
 .PARAMETER SkipPermissionsPass
   Only run the --no-permissions install pass (skip the second permissions pass).
@@ -45,7 +57,10 @@ param(
   [string] $NodeVersion = "lts-latest",
   [string] $Target = "cursor",
   [switch] $SkipFnm,
+  [switch] $RequireFnm,
   [switch] $SkipAgentInstall,
+  [switch] $SkipMcpJson,
+  [switch] $WriteWorkspaceMcp,
   [switch] $SkipPermissionsPass,
   [switch] $Elevated,
   [switch] $ForceInit,
@@ -60,115 +75,35 @@ function Write-Section([string] $Title) {
   Write-Host "=== $Title ==="
 }
 
-function Initialize-FnmEnv {
-  $fnm = Get-Command fnm -ErrorAction SilentlyContinue
-  if (-not $fnm) { return $false }
-  try {
-    $envOut = & fnm env --shell power-shell 2>$null
-    if ($envOut) {
-      $envOut | Out-String | Invoke-Expression
-    }
-  } catch {
-    try {
-      (& fnm env) | Out-String | Invoke-Expression
-    } catch { }
-  }
-  return [bool](Get-Command node -ErrorAction SilentlyContinue)
-}
-
-function Install-FnmIfMissing {
-  if (Get-Command fnm -ErrorAction SilentlyContinue) {
-    Write-Host "  fnm already on PATH"
-    return
-  }
-
-  Write-Host "  Installing fnm (per-user, no admin)..."
-  $winget = Get-Command winget -ErrorAction SilentlyContinue
-  if ($winget) {
-    $prev = $ErrorActionPreference
-    $ErrorActionPreference = "Continue"
-    try {
-      & winget install --id Schniz.fnm -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity --scope user
-    } finally {
-      $ErrorActionPreference = $prev
-    }
-    # Refresh common winget shim path
-    $shim = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"
-    if ((Test-Path $shim) -and ($env:Path -notlike "*$shim*")) {
-      $env:Path = "$shim;$env:Path"
-    }
-  }
-
-  if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
-    # Portable zip into LocalAppData
-    $fnmRoot = Join-Path $env:LOCALAPPDATA "fnm"
-    New-Item -ItemType Directory -Force -Path $fnmRoot | Out-Null
-    $api = "https://api.github.com/repos/Schniz/fnm/releases/latest"
-    Write-Host "  Resolving fnm release from GitHub..."
-    $rel = Invoke-RestMethod -Uri $api -Headers @{ "User-Agent" = "local-llm-chat" }
-    $asset = @($rel.assets) | Where-Object { $_.name -match "fnm-windows\.zip$|windows.*\.zip$" } | Select-Object -First 1
-    if (-not $asset) {
-      throw "Could not find fnm Windows zip on GitHub releases. Install manually: winget install Schniz.fnm"
-    }
-    $zip = Join-Path $env:TEMP "fnm-windows.zip"
-    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
-    Expand-Archive -Path $zip -DestinationPath $fnmRoot -Force
-    $exe = Get-ChildItem -Path $fnmRoot -Recurse -Filter "fnm.exe" | Select-Object -First 1
-    if (-not $exe) { throw "fnm.exe missing after extract" }
-    if ($env:Path -notlike "*$($exe.DirectoryName)*") {
-      $env:Path = "$($exe.DirectoryName);$env:Path"
-    }
-    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-    if ($userPath -notlike "*$($exe.DirectoryName)*") {
-      [Environment]::SetEnvironmentVariable("Path", "$($exe.DirectoryName);$userPath", "User")
-    }
-  }
-
-  if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
-    throw "fnm still not on PATH. Open a new shell or install from https://github.com/Schniz/fnm"
-  }
-  Write-Host "  fnm OK: $((Get-Command fnm).Source)"
-}
-
-function Ensure-NodeViaFnm {
-  param([string] $Version)
-
-  Write-Host ("  Ensuring Node ({0}) via fnm..." -f $Version)
-  & fnm install $Version
-  if ($LASTEXITCODE -ne 0) { throw "fnm install $Version failed (exit $LASTEXITCODE)" }
-  & fnm use $Version
-  & fnm default $Version
+function Ensure-CodegraphCli {
+  # Always refresh fnm env so npm/codegraph resolve from preferred runtime
   [void](Initialize-FnmEnv)
 
-  $node = Get-Command node -ErrorAction SilentlyContinue
-  $npm = Get-Command npm -ErrorAction SilentlyContinue
-  if (-not $node -or -not $npm) {
-    throw "node/npm not available after fnm use. Open a new PowerShell and re-run."
-  }
-  Write-Host ("  node: {0}" -f (& node -v))
-  Write-Host ("  npm:  {0}" -f (& npm -v))
-}
-
-function Ensure-CodegraphCli {
   $cg = Get-Command codegraph -ErrorAction SilentlyContinue
   if ($cg) {
     Write-Host ("  codegraph already on PATH: {0}" -f $cg.Source)
     return
   }
+
+  $runtime = Get-NodeRuntimeInfo
+  Write-Host ("  Using npm from: {0} ({1})" -f $runtime.Source, $runtime.NpmPath)
   Write-Host "  npm i -g @colbymchenry/codegraph"
   & npm i -g @colbymchenry/codegraph
   if ($LASTEXITCODE -ne 0) { throw "npm global install failed (exit $LASTEXITCODE)" }
 
-  # npm global bin (user)
-  $npmRoot = & npm root -g
-  $npmBin = Split-Path -Parent $npmRoot
-  if ($npmBin -and (Test-Path $npmBin) -and ($env:Path -notlike "*$npmBin*")) {
-    $env:Path = "$npmBin;$env:Path"
-  }
+  # npm global bin (user) + fnm env again
+  try {
+    $npmRoot = & npm root -g
+    $npmBin = Split-Path -Parent $npmRoot
+    if ($npmBin -and (Test-Path $npmBin) -and ($env:Path -notlike "*$npmBin*")) {
+      $env:Path = "$npmBin;$env:Path"
+    }
+  } catch { }
   $roamingNpm = Join-Path $env:APPDATA "npm"
   if ((Test-Path $roamingNpm) -and ($env:Path -notlike "*$roamingNpm*")) {
     $env:Path = "$roamingNpm;$env:Path"
   }
+  [void](Initialize-FnmEnv)
 
   if (-not (Get-Command codegraph -ErrorAction SilentlyContinue)) {
     throw "codegraph still not on PATH after npm install. Open a new shell and re-run."
@@ -181,6 +116,7 @@ function Invoke-CodegraphAgentInstall {
     [string] $Target,
     [switch] $NoPermissions
   )
+  [void](Initialize-FnmEnv)
   $args = @("install", "--yes", "--target=$Target", "--location=global")
   if ($NoPermissions) { $args += "--no-permissions" }
   Write-Host ("  codegraph {0}" -f ($args -join " "))
@@ -198,44 +134,49 @@ if (-not (Test-Path -LiteralPath $ProjectPath)) {
 $ProjectPath = (Resolve-Path -LiteralPath $ProjectPath).Path
 $graphDir = Join-Path $ProjectPath ".codegraph"
 
+Add-FnmCommonPaths
+[void](Initialize-FnmEnv)
+$runtime = Get-NodeRuntimeInfo
+
 Write-Section "Codegraph status"
 Write-Host ("  Project:    {0}" -f $ProjectPath)
 Write-Host ("  .codegraph: {0}" -f (Test-Path -LiteralPath $graphDir))
-Write-Host ("  fnm:        {0}" -f $(if (Get-Command fnm -EA SilentlyContinue) { (Get-Command fnm).Source } else { "(missing)" }))
-Write-Host ("  node:       {0}" -f $(if (Get-Command node -EA SilentlyContinue) { & node -v } else { "(missing)" }))
+Write-Host ("  fnm:        {0}" -f $(if ($runtime.FnmPresent) { $runtime.FnmPath } else { "(missing)" }))
+Write-Host ("  node:       {0}" -f $(if ($runtime.NodePresent) { "{0} ({1})" -f $runtime.NodeVersion, $runtime.Source } else { "(missing)" }))
+Write-Host ("  node path:  {0}" -f $(if ($runtime.NodePath) { $runtime.NodePath } else { "(none)" }))
 Write-Host ("  codegraph:  {0}" -f $(if (Get-Command codegraph -EA SilentlyContinue) { (Get-Command codegraph).Source } else { "(missing)" }))
+$mcpStatus = Get-CodegraphMcpJsonStatus
+Write-Host ("  Cursor MCP: {0} ({1})" -f $(if ($mcpStatus.CursorHas) { "OK" } else { "missing codegraph" }), $mcpStatus.CursorPath)
+Write-Host ("  VS Code MCP:{0} ({1})" -f $(if ($mcpStatus.VSCodeHas) { "OK" } else { "missing codegraph" }), $mcpStatus.VSCodePath)
+Write-Host ("  MCP launch: {0}" -f $mcpStatus.LaunchMode)
 
 if ($CheckOnly) {
   $okCli = [bool](Get-Command codegraph -ErrorAction SilentlyContinue)
   $okGraph = Test-Path -LiteralPath $graphDir
-  if ($okCli -and $okGraph) {
-    Write-Host "  CheckOnly: codegraph CLI + project index OK"
+  $okMcp = $mcpStatus.CursorHas -and $mcpStatus.VSCodeHas
+  if ($runtime.NodePresent -and -not $runtime.FromFnm -and $runtime.FnmPresent) {
+    Write-Host "  Note: fnm is installed but active node is system - re-run without -CheckOnly to prefer fnm"
+  }
+  if ($okCli -and $okGraph -and $okMcp) {
+    Write-Host ("  CheckOnly: codegraph CLI + index + Cursor/VS Code MCP OK (node via {0})" -f $runtime.Source)
     exit 0
   }
-  Write-Host "  CheckOnly: incomplete (cli=$okCli graph=$okGraph) - re-run without -CheckOnly"
+  Write-Host "  CheckOnly: incomplete (cli=$okCli graph=$okGraph cursorMcp=$($mcpStatus.CursorHas) vscodeMcp=$($mcpStatus.VSCodeHas)) - re-run without -CheckOnly"
   exit 1
 }
 
-# --- 1) fnm + Node (no admin) ---
-if (-not $SkipFnm) {
-  Write-Section "1/4 fnm + Node (no admin)"
-  Install-FnmIfMissing
-  [void](Initialize-FnmEnv)
-  Ensure-NodeViaFnm -Version $NodeVersion
-} else {
-  Write-Section "1/4 SkipFnm"
-  if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-    throw "-SkipFnm set but npm not on PATH"
-  }
-}
+# --- 1) Node runtime: fnm preferred, system npm only if fnm fails ---
+Write-Section "1/5 Node runtime (fnm preferred)"
+$runtime = Ensure-NodeRuntimePreferFnm -Version $NodeVersion -SkipFnm:$SkipFnm -RequireFnm:$RequireFnm
+Write-Host ("  Active Node source: {0}" -f $runtime.Source)
 
 # --- 2) CLI package ---
-Write-Section "2/4 npm global @colbymchenry/codegraph"
+Write-Section "2/5 npm global @colbymchenry/codegraph"
 Ensure-CodegraphCli
 
 # --- 3) Agent wire: no-permissions then permissions ---
 if (-not $SkipAgentInstall) {
-  Write-Section "3/4 codegraph install (agents)"
+  Write-Section "3/5 codegraph install (agents)"
   Write-Host "  Pass A: --no-permissions (MCP wire without agent auto-allow)"
   Invoke-CodegraphAgentInstall -Target $Target -NoPermissions
 
@@ -251,11 +192,29 @@ if (-not $SkipAgentInstall) {
     Write-Host "  SkipPermissionsPass set - left agents without auto-allow list"
   }
 } else {
-  Write-Section "3/4 SkipAgentInstall"
+  Write-Section "3/5 SkipAgentInstall"
 }
 
-# --- 4) init project if needed ---
-Write-Section "4/4 codegraph init"
+# --- 4) MCP JSON for Cursor + VS Code ---
+if (-not $SkipMcpJson) {
+  Write-Section "4/5 MCP JSON (Cursor + VS Code)"
+  $mcpArgs = @{ ProjectPath = $ProjectPath }
+  if ($WriteWorkspaceMcp) { $mcpArgs["WriteWorkspaceFiles"] = $true }
+  $mcp = Update-CodegraphMcpJsonFiles @mcpArgs
+  Write-Host ("  Launch mode: {0}" -f $mcp.LaunchMode)
+  Write-Host ("  Command:     {0}" -f $mcp.Command)
+  Write-Host ("  Cursor:      {0}" -f $mcp.CursorPath)
+  Write-Host ("  VS Code:     {0}" -f $mcp.VSCodePath)
+  foreach ($w in @($mcp.Workspace)) {
+    Write-Host ("  Workspace:   {0}" -f $w)
+  }
+} else {
+  Write-Section "4/5 SkipMcpJson"
+}
+
+# --- 5) init project if needed ---
+Write-Section "5/5 codegraph init"
+[void](Initialize-FnmEnv)
 if ((Test-Path -LiteralPath $graphDir) -and -not $ForceInit) {
   Write-Host "  .codegraph already exists - skip init (pass -ForceInit to rebuild)"
 } else {
@@ -276,7 +235,11 @@ if ((Test-Path -LiteralPath $graphDir) -and -not $ForceInit) {
 }
 
 Write-Section "Done"
-Write-Host "Restart Cursor (or your agent) so Codegraph MCP reloads."
+Write-Host ("Node used via: {0}" -f (Get-NodeRuntimeInfo).Source)
+$finalMcp = Get-CodegraphMcpJsonStatus
+Write-Host ("Cursor MCP codegraph: {0}" -f $finalMcp.CursorHas)
+Write-Host ("VS Code MCP codegraph: {0}" -f $finalMcp.VSCodeHas)
+Write-Host "Restart Cursor and VS Code so MCP reloads."
 Write-Host "Index another app: .\scripts\Install-Codegraph.ps1 -ProjectPath D:\path\to\app"
 Write-Host ("Status:           .\scripts\Install-Codegraph.ps1 -CheckOnly -ProjectPath {0}" -f $ProjectPath)
 exit 0

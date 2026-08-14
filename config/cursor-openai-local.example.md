@@ -75,3 +75,5 @@ Invoke-RestMethod http://localhost:11434/api/tags
 ```
 
 `Test-CursorOllama.ps1` checks Models wiring (including remote models disabled) and smokes `POST …/v1/chat/completions` the same way Cursor does.
+
+Also run `.\scripts\Disable-RemoteAIProviders.ps1` to strip remotes from Continue/Cline and disable Copilot/built-in chat AI (see [local-only-ai.example.md](local-only-ai.example.md)).

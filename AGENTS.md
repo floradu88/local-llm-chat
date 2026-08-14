@@ -1,6 +1,6 @@
 # Agent instructions — local-llm-chat
 
-You are working in the **local-llm-chat** repo. Its purpose is to install and run **local coding LLMs via Ollama** on Windows (no admin when possible), pull or import models from trusted sources, and wire **VS Code (Continue)**, **Cursor**, **Codegraph**, and **Headroom**.
+You are working in the **local-llm-chat** repo. Its purpose is to install and run **local coding LLMs via Ollama** on Windows (no admin when possible), pull or import models from trusted sources, and wire **VS Code Local AI (Continue + Cline)**, **Cursor**, **Codegraph**, and **Headroom**.
 
 ## Always do this first
 
@@ -20,9 +20,9 @@ cd <repo-root>
 
 | Path | Role |
 |------|------|
-| `scripts/` | PowerShell: env, Ollama/Cursor/VS Code Continue/Codegraph/GPU install+config, pull/download/import, Headroom, full machine setup |
+| `scripts/` | PowerShell: env, Ollama/Cursor/VS Code Local AI (Continue+Cline)/Codegraph/GPU install+config, pull/download/import, Headroom, full machine setup |
 | `docs/` | Human + agent docs (setup, trusted sources, web import, integrations) |
-| `config/` | Modelfile template, Continue example, Cursor checklist |
+| `config/` | Modelfile template, Continue example, VS Code + Cursor checklists |
 | `models/gguf/` | Downloaded GGUF (gitignored) |
 | `models/ollama/` | Optional `OLLAMA_MODELS` root (gitignored) |
 
@@ -33,15 +33,16 @@ cd <repo-root>
 3. `.\scripts\Install-Cursor.ps1` (skips if already installed; per-user)
 4. `.\scripts\Pull-CodingModels.ps1 -Tier <8GB|16GB|32GB|Auto>` (skips tags already on disk; `-Force` to re-pull)
 5. Wire **Cursor** → Ollama: quit Cursor if open, then `.\scripts\Install-CursorConfig.ps1` (finds install + writes Models into `state.vscdb`; disables cloud/catalog models by default; `-KeepRemoteModels` to keep them)
-6. Wire **VS Code** → Ollama: `.\scripts\Install-ContinueConfig.ps1` (alias `Install-VSCodeConfig.ps1` — finds Code.exe, installs Continue extension, writes `~\.continue\config.json`)
-7. `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1` / `.\scripts\Test-CursorOllama.ps1`
-8. Optional: `.\scripts\Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` (VM needs host GPU passthrough first)
-9. Optional: `.\scripts\Start-HeadroomOllama.ps1` then `Install-CursorConfig.ps1 -Headroom` and/or `Install-ContinueConfig.ps1 -Headroom -Force`
-10. Optional: `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (fnm → npm → `--no-permissions` then permissions → `codegraph init` if needed)
+6. Wire **VS Code Local AI**: `.\scripts\Install-VSCodeLocalAI.ps1` then `.\scripts\Test-VSCodeSetup.ps1`
+7. Local-only: `.\scripts\Disable-RemoteAIProviders.ps1` (disables Cursor catalog remotes, Continue/Cline cloud providers, Copilot/built-in chat, Ollama cloud)
+8. `.\scripts\Test-LocalSetup.ps1` / `.\scripts\Show-SetupStatus.ps1` / `.\scripts\Test-CursorOllama.ps1` / `.\scripts\Test-VSCodeSetup.ps1`
+9. Optional: `.\scripts\Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` (VM needs host GPU passthrough first)
+10. Optional: `.\scripts\Start-HeadroomOllama.ps1` then `Install-CursorConfig.ps1 -Headroom` and/or `Install-VSCodeLocalAI.ps1 -Headroom -Force`
+11. Optional: `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (**fnm preferred**; updates **Cursor + VS Code mcp.json**; system npm only if fnm fails → agent install → `codegraph init`)
 
-One-shot: `.\scripts\Setup-Machine.ps1` (env + Ollama + Cursor install + pulls + **Cursor config** + **VS Code Continue config** + verify). Use `-SkipCursor` / `-SkipCursorConfig` / `-SkipContinueConfig` / `-InstallGpuDrivers` as needed.
+One-shot: `.\scripts\Setup-Machine.ps1` (env + Ollama + Cursor install + pulls + **Cursor config** + **VS Code Local AI** + **Disable-RemoteAIProviders** + verify). Use `-SkipCursor` / `-SkipCursorConfig` / `-SkipContinueConfig` / `-SkipClineConfig` / `-InstallGpuDrivers` as needed.
 
-Editor details: [docs/integrations.md](docs/integrations.md), Cases H/I in README, `config/cursor-openai-local.example.md`.
+Editor details: [docs/integrations.md](docs/integrations.md), Cases H/I in README, `config/vscode-ollama-local.example.md`, `config/cursor-openai-local.example.md`, `config/local-only-ai.example.md`.
 
 ## Trusted sources only
 
@@ -57,10 +58,11 @@ Do not fetch models from random Drive/Telegram/unsigned mirrors.
 ## When the user asks to “set up local models”
 
 - Run or guide `Setup-Machine.ps1` with an appropriate `-Tier` from their RAM.
-- Verify with `.\scripts\Test-LocalSetup.ps1`, `.\scripts\Show-SetupStatus.ps1`, and `.\scripts\Test-CursorOllama.ps1` (Cases H/H-cfg and I/I-cfg should go green).
+- Verify with `.\scripts\Test-LocalSetup.ps1`, `.\scripts\Show-SetupStatus.ps1`, `.\scripts\Test-VSCodeSetup.ps1` (alias `Test-VSCodeOllama.ps1`), and `.\scripts\Test-CursorOllama.ps1` (H/H-cfg/H-agent, I/I-cfg, L-vscode should go green).
 - Cursor: `Install-Cursor.ps1` then quit Cursor and `Install-CursorConfig.ps1`.
-- VS Code: `Install-ContinueConfig.ps1` (or `Install-VSCodeConfig.ps1`) — finds Code.exe and wires Continue.
-- Point them at [docs/integrations.md](docs/integrations.md) and `config/cursor-openai-local.example.md`.
+- VS Code: `Install-VSCodeLocalAI.ps1` (Continue chat + Cline agent); or Continue-only / Cline-only scripts.
+- Local-only remotes: `Disable-RemoteAIProviders.ps1` (OpenAI/Cursor/Grok/Copilot/etc.).
+- Point them at [docs/integrations.md](docs/integrations.md) and the config checklists under `config/`.
 - For Hugging Face GGUF: `Download-FromHuggingFace.ps1` then `Import-GGUF.ps1` (both skip if already present unless `-Force`).
 - For ModelScope/GitHub URL: `Download-FromUrl.ps1` then `Import-GGUF.ps1`.
 - For GPU questions / VMs: `Test-GpuSupport.ps1` and `Install-GpuDrivers.ps1` (guest needs a visible NVIDIA device).

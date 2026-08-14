@@ -1,32 +1,34 @@
 <#
 .SYNOPSIS
-  Alias for Install-ContinueConfig.ps1 (VS Code + Continue → Ollama).
+  Alias for Install-VSCodeLocalAI.ps1 (Continue chat + Cline agent → Ollama).
 
 .DESCRIPTION
-  Same behavior as Install-ContinueConfig.ps1 — find VS Code, install Continue,
-  write ~/.continue/config.json for local Ollama. Named to mirror Install-CursorConfig.ps1.
+  Preferred VS Code entry point (Case H). For Continue-only, call Install-ContinueConfig.ps1.
 #>
 [CmdletBinding()]
 param(
-  [string] $ApiBase = "http://localhost:11434",
   [string[]] $Models = @(),
+  [string] $ClineModel = "",
   [switch] $Headroom,
   [switch] $Force,
-  [switch] $CheckOnly,
-  [switch] $SkipExtension,
-  [string] $AutocompleteModel = ""
+  [switch] $SkipVSCodeInstall,
+  [switch] $SkipContinue,
+  [switch] $SkipCline,
+  [switch] $SkipTest,
+  [switch] $CheckOnly
 )
 
 $ErrorActionPreference = "Stop"
-$argsHash = @{
-  ApiBase = $ApiBase
-}
+$argsHash = @{}
 if ($Models -and $Models.Count -gt 0) { $argsHash["Models"] = $Models }
+if ($ClineModel) { $argsHash["ClineModel"] = $ClineModel }
 if ($Headroom) { $argsHash["Headroom"] = $true }
 if ($Force) { $argsHash["Force"] = $true }
+if ($SkipVSCodeInstall) { $argsHash["SkipVSCodeInstall"] = $true }
+if ($SkipContinue) { $argsHash["SkipContinue"] = $true }
+if ($SkipCline) { $argsHash["SkipCline"] = $true }
+if ($SkipTest) { $argsHash["SkipTest"] = $true }
 if ($CheckOnly) { $argsHash["CheckOnly"] = $true }
-if ($SkipExtension) { $argsHash["SkipExtension"] = $true }
-if ($AutocompleteModel) { $argsHash["AutocompleteModel"] = $AutocompleteModel }
 
-& (Join-Path $PSScriptRoot "Install-ContinueConfig.ps1") @argsHash
+& (Join-Path $PSScriptRoot "Install-VSCodeLocalAI.ps1") @argsHash
 exit $LASTEXITCODE

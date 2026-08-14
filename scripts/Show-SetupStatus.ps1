@@ -65,18 +65,26 @@ if ($hasCoding) {
   Write-Check "E/F" "FAIL" "no models - run Pull-CodingModels.ps1 or Setup-Machine.ps1"
 }
 
-# H VS Code + Continue
+# H VS Code Local AI (Continue chat + Cline agent)
 $vsInfo = Get-VSCodeInstallInfo
 if ($vsInfo.Installed) {
   Write-Check "H" "OK" ("VS Code installed ({0}): {1}" -f $vsInfo.Scope, $(if ($vsInfo.ExePath) { $vsInfo.ExePath } else { $vsInfo.CmdPath }))
 } else {
-  Write-Check "H" "WARN" "VS Code missing - install from code.visualstudio.com (User Installer)"
+  Write-Check "H" "WARN" "VS Code missing - .\scripts\Install-VSCode.ps1 (or Install-VSCodeLocalAI.ps1)"
 }
 $cont = Get-ContinueOllamaConfigStatus
 if ($cont.Configured) {
-  Write-Check "H-cfg" "OK" ("Continue → {0} models: {1}" -f $cont.ApiBase, ($cont.Models -join ", "))
+  $loc = if ($cont.LocalOnly) { "local-only" } else { "HAS REMOTE - Disable-RemoteAIProviders.ps1" }
+  Write-Check "H-cfg" "OK" ("Continue (chat) -> {0} models: {1} ({2})" -f $cont.ApiBase, ($cont.Models -join ", "), $loc)
 } else {
-  Write-Check "H-cfg" "WARN" "run .\scripts\Install-ContinueConfig.ps1 (or Install-VSCodeConfig.ps1)"
+  Write-Check "H-cfg" "WARN" "run .\scripts\Install-ContinueConfig.ps1 or .\scripts\Install-VSCodeLocalAI.ps1; verify .\scripts\Test-VSCodeSetup.ps1"
+}
+$cline = Get-ClineOllamaConfigStatus
+if ($cline.Configured) {
+  $loc = if ($cline.LocalOnly) { "local-only" } else { "HAS REMOTE - Disable-RemoteAIProviders.ps1" }
+  Write-Check "H-agent" "OK" ("Cline (agent) -> {0} ({1}; {2})" -f $cline.Model, $cline.BaseUrl, $loc)
+} else {
+  Write-Check "H-agent" "WARN" "run .\scripts\Install-ClineConfig.ps1 or .\scripts\Install-VSCodeLocalAI.ps1; verify .\scripts\Test-VSCodeSetup.ps1"
 }
 
 # I Cursor
@@ -104,11 +112,34 @@ if (Get-Command headroom -ErrorAction SilentlyContinue) {
 }
 
 # K Codegraph
+Add-FnmCommonPaths
+[void](Initialize-FnmEnv)
+$nodeInfo = Get-NodeRuntimeInfo
+if ($nodeInfo.FnmPresent -and $nodeInfo.FromFnm) {
+  Write-Check "K-node" "OK" ("Node via fnm: {0}" -f $nodeInfo.NodeVersion)
+} elseif ($nodeInfo.FnmPresent -and $nodeInfo.NodePresent) {
+  Write-Check "K-node" "WARN" ("fnm present but active node is system ({0}) - re-run Install-Codegraph.ps1" -f $nodeInfo.NodeVersion)
+} elseif ($nodeInfo.NodePresent) {
+  Write-Check "K-node" "WARN" ("Node via system npm only ({0}) - fnm preferred: Install-Codegraph.ps1" -f $nodeInfo.NodeVersion)
+} else {
+  Write-Check "K-node" "WARN" "node missing - .\scripts\Install-Codegraph.ps1 (fnm preferred)"
+}
 $cgCmd = Get-Command codegraph -ErrorAction SilentlyContinue
 if ($cgCmd) {
   Write-Check "K-cli" "OK" ("codegraph CLI: {0}" -f $cgCmd.Source)
 } else {
   Write-Check "K-cli" "WARN" "codegraph CLI missing - .\scripts\Install-Codegraph.ps1"
+}
+$mcp = Get-CodegraphMcpJsonStatus
+if ($mcp.CursorHas) {
+  Write-Check "K-mcp-c" "OK" ("Cursor MCP codegraph ({0})" -f $mcp.LaunchMode)
+} else {
+  Write-Check "K-mcp-c" "WARN" "Cursor ~/.cursor/mcp.json missing codegraph - Install-Codegraph.ps1"
+}
+if ($mcp.VSCodeHas) {
+  Write-Check "K-mcp-v" "OK" ("VS Code User/mcp.json codegraph ({0})" -f $mcp.VSCodePath)
+} else {
+  Write-Check "K-mcp-v" "WARN" "VS Code mcp.json missing codegraph - Install-Codegraph.ps1"
 }
 if (Test-Path (Join-Path $RepoRoot ".codegraph")) {
   Write-Check "K" "OK" ".codegraph exists in this repo"
@@ -142,6 +173,18 @@ if (Test-Path $cursorTest) {
   Write-Check "L-cursor" "OK" "Test-CursorOllama.ps1 available (run for Models + chat smoke)"
 } else {
   Write-Check "L-cursor" "FAIL" "Test-CursorOllama.ps1 missing"
+}
+$vsTest = Join-Path $PSScriptRoot "Test-VSCodeSetup.ps1"
+if (Test-Path $vsTest) {
+  Write-Check "L-vscode" "OK" "Test-VSCodeSetup.ps1 available (full VS Code local AI check)"
+} else {
+  Write-Check "L-vscode" "FAIL" "Test-VSCodeSetup.ps1 missing"
+}
+$disRemote = Join-Path $PSScriptRoot "Disable-RemoteAIProviders.ps1"
+if (Test-Path $disRemote) {
+  Write-Check "L-local" "OK" "Disable-RemoteAIProviders.ps1 available (block OpenAI/Cursor/Grok/etc.)"
+} else {
+  Write-Check "L-local" "FAIL" "Disable-RemoteAIProviders.ps1 missing"
 }
 
 # M URL downloader

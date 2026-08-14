@@ -19,6 +19,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "_common.ps1")
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 if (-not $ProjectPath) {
   $ProjectPath = (Get-Location).Path
@@ -29,10 +30,14 @@ if (-not (Test-Path -LiteralPath $ProjectPath)) {
 $ProjectPath = (Resolve-Path -LiteralPath $ProjectPath).Path
 $graphDir = Join-Path $ProjectPath ".codegraph"
 
+# Prefer fnm-backed node/npm on PATH when available
+Add-FnmCommonPaths
+[void](Initialize-FnmEnv)
+
 $cg = Get-Command codegraph -ErrorAction SilentlyContinue
 if (-not $cg) {
   if ($InstallIfMissing) {
-    Write-Host "codegraph not on PATH — running Install-Codegraph.ps1 (fnm → npm → agent install → init)..."
+    Write-Host "codegraph not on PATH - running Install-Codegraph.ps1 (fnm preferred, system npm fallback)..."
     $args = @{ ProjectPath = $ProjectPath }
     if ($ForceInit) { $args["ForceInit"] = $true }
     & (Join-Path $PSScriptRoot "Install-Codegraph.ps1") @args

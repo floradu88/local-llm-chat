@@ -133,9 +133,19 @@ function catalogModelNames(data) {
     "claude-sonnet-4-6",
     "grok-4.5",
     "grok-4.6",
+    "grok-code",
     "gemini-2.5-pro",
     "gemini-3.1-pro",
     "gemini-3.6-flash",
+    "o3",
+    "o4-mini",
+    "chatgpt-4o",
+    "gpt-4o",
+    "gpt-4.1",
+    "claude-3.5-sonnet",
+    "claude-3.7-sonnet",
+    "cursor-small",
+    "cursor-fast",
   ]) {
     names.add(extra);
   }

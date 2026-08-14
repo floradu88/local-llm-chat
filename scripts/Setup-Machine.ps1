@@ -5,7 +5,7 @@
 .DESCRIPTION
   Intended for humans and local agents following AGENTS.md / docs/agent-setup-playbook.md.
   Configures Cursor → Ollama via Install-CursorConfig.ps1 when Cursor is present (unless -SkipCursorConfig).
-  Configures VS Code Continue → Ollama via Install-ContinueConfig.ps1 (unless -SkipContinueConfig).
+  Configures VS Code Local AI (Continue chat + Cline agent) via Install-VSCodeLocalAI.ps1 (unless -SkipContinueConfig).
 
 .PARAMETER Tier
   RAM tier for Pull-CodingModels: 8GB | 16GB | 32GB | Auto
@@ -42,10 +42,16 @@
   Pass -Force to Install-CursorConfig.ps1 (replace non-Ollama base URL / write while Cursor running).
 
 .PARAMETER SkipContinueConfig
-  Do not write VS Code Continue → Ollama settings (Install-ContinueConfig.ps1).
+  Do not run Install-VSCodeLocalAI / Continue → Ollama.
 
 .PARAMETER ForceContinueConfig
-  Pass -Force to Install-ContinueConfig.ps1 (overwrite ~/.continue/config.json).
+  Pass -Force to VS Code Local AI install (overwrite Continue/Cline configs).
+
+.PARAMETER SkipClineConfig
+  Install Continue only (skip Cline agent) when wiring VS Code Local AI.
+
+.PARAMETER SkipVSCodeInstall
+  Do not auto-install VS Code when missing during Local AI setup.
 #>
 [CmdletBinding()]
 param(
@@ -62,7 +68,9 @@ param(
   [switch] $SkipCursorConfig,
   [switch] $ForceCursorConfig,
   [switch] $SkipContinueConfig,
-  [switch] $ForceContinueConfig
+  [switch] $ForceContinueConfig,
+  [switch] $SkipClineConfig,
+  [switch] $SkipVSCodeInstall
 )
 
 $ErrorActionPreference = "Stop"
@@ -154,20 +162,39 @@ if ($SkipCursor -or $SkipCursorConfig) {
   }
 }
 
-# 7) VS Code Continue → Ollama
+# 7) VS Code Local AI (Continue chat + Cline agent)
 Write-Host ""
 if ($SkipContinueConfig) {
-  Write-Host "[7/8] SkipContinueConfig set - not writing Continue config"
+  Write-Host "[7/8] SkipContinueConfig set - not wiring VS Code Local AI"
 } else {
-  Write-Host "[7/8] Install-ContinueConfig.ps1 (VS Code Continue → Ollama)"
-  $contArgs = @{}
-  if ($ForceContinueConfig) { $contArgs["Force"] = $true }
+  Write-Host "[7/8] Install-VSCodeLocalAI.ps1 (Continue + Cline -> Ollama)"
+  $vsArgs = @{ SkipTest = $true }
+  if ($ForceContinueConfig) { $vsArgs["Force"] = $true }
+  if ($SkipClineConfig) { $vsArgs["SkipCline"] = $true }
+  if ($SkipVSCodeInstall) { $vsArgs["SkipVSCodeInstall"] = $true }
   try {
-    & (Join-Path $Scripts "Install-ContinueConfig.ps1") @contArgs
+    & (Join-Path $Scripts "Install-VSCodeLocalAI.ps1") @vsArgs
   } catch {
-    Write-Warning "VS Code Continue config skipped: $_"
-    Write-Host "  Run: .\scripts\Install-ContinueConfig.ps1 -Force"
+    Write-Warning "VS Code Local AI skipped: $_"
+    Write-Host "  Run: .\scripts\Install-VSCodeLocalAI.ps1 -Force"
   }
+}
+
+# 7b) Local-only: disable remote providers (Cursor + VS Code + Ollama cloud)
+Write-Host ""
+Write-Host "[7b] Disable-RemoteAIProviders.ps1 (local-only)"
+try {
+  $disArgs = @{}
+  if ($ForceCursorConfig -or $ForceContinueConfig) { $disArgs["Force"] = $true }
+  if ($SkipCursor -or $SkipCursorConfig) { $disArgs["SkipCursor"] = $true }
+  if ($SkipContinueConfig) {
+    $disArgs["SkipContinue"] = $true
+    $disArgs["SkipCline"] = $true
+  }
+  & (Join-Path $Scripts "Disable-RemoteAIProviders.ps1") @disArgs
+} catch {
+  Write-Warning "Remote-provider disable skipped: $_"
+  Write-Host "  Run: .\scripts\Disable-RemoteAIProviders.ps1"
 }
 
 # 8) Verify
@@ -176,12 +203,13 @@ Write-Host "[8/8] Test-LocalSetup.ps1"
 
 Write-Host ""
 Write-Host "=== Next (editor / tools) - see docs\integrations.md and README Cases H-K ==="
-Write-Host "VS Code: .\scripts\Install-ContinueConfig.ps1   (alias: Install-VSCodeConfig.ps1)"
+Write-Host "VS Code: .\scripts\Install-VSCodeLocalAI.ps1   then .\scripts\Test-VSCodeSetup.ps1"
 Write-Host "Cursor:  .\scripts\Install-CursorConfig.ps1   (quit Cursor first if it overwrites)"
-Write-Host "Codegraph: .\scripts\Install-Codegraph.ps1 -ProjectPath <repo>  (fnm → npm → install → init)"
+Write-Host "Local-only: .\scripts\Disable-RemoteAIProviders.ps1"
+Write-Host "Codegraph: .\scripts\Install-Codegraph.ps1 -ProjectPath <repo>  (fnm preferred; system npm fallback)"
 Write-Host "GPU check: .\scripts\Test-GpuSupport.ps1"
 if (-not $SkipHeadroomHint) {
-  Write-Host "Headroom: .\scripts\Start-HeadroomOllama.ps1  then Install-CursorConfig / Install-ContinueConfig -Headroom"
+  Write-Host "Headroom: .\scripts\Start-HeadroomOllama.ps1  then Install-CursorConfig / Install-VSCodeLocalAI -Headroom"
 }
 Write-Host ""
 Write-Host "Agent playbook: docs\agent-setup-playbook.md"

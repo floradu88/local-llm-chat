@@ -11,7 +11,7 @@ Example models: `qwen2.5-coder:7b`, `deepseek-coder-v2:16b`, `codellama:13b`.
 ## Before you prompt (faster context)
 
 ```powershell
-# Install + index (fnm → npm → agent wire → init if needed)
+# Install + index (fnm preferred; system npm only if fnm fails)
 .\scripts\Install-Codegraph.ps1 -ProjectPath .
 
 # Optional: ask the agent to use Codegraph MCP tools first

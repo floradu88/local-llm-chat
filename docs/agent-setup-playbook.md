@@ -43,8 +43,10 @@ Flags:
 | `-ForceCursor` | Re-run Cursor installer even if present |
 | `-SkipCursorConfig` | Do not run `Install-CursorConfig.ps1` |
 | `-ForceCursorConfig` | Pass `-Force` to Cursor Ollama config (quit Cursor first preferred) |
-| `-SkipContinueConfig` | Do not run `Install-ContinueConfig.ps1` |
-| `-ForceContinueConfig` | Overwrite `~\.continue\config.json` |
+| `-SkipContinueConfig` | Do not run `Install-VSCodeLocalAI.ps1` |
+| `-ForceContinueConfig` | Pass `-Force` (overwrite Continue/Cline configs) |
+| `-SkipClineConfig` | Continue only (skip Cline agent) |
+| `-SkipVSCodeInstall` | Do not auto-install VS Code when missing |
 
 What `Setup-Machine.ps1` does:
 
@@ -54,10 +56,11 @@ What `Setup-Machine.ps1` does:
 4. Checks Cursor; installs **current-user** build if missing (unless `-SkipCursor`)
 5. Pulls tier coding models (**skips tags already on disk**; use `Update-CodingModels.ps1` or `-Force` to refresh)
 6. Wires **Cursor Models → Ollama** via `Install-CursorConfig.ps1` (unless `-SkipCursorConfig`; quit Cursor if open)
-7. Wires **VS Code Continue → Ollama** via `Install-ContinueConfig.ps1` (unless `-SkipContinueConfig`; finds Code.exe, installs Continue extension)
-8. Runs `Test-LocalSetup.ps1` and prints GPU / Headroom next steps
+7. Wires **VS Code Local AI** via `Install-VSCodeLocalAI.ps1` (unless `-SkipContinueConfig`) — Continue (chat) + Cline (agent)
+8. Runs `Disable-RemoteAIProviders.ps1` (Cursor catalog remotes, Continue/Cline cloud providers, Copilot/chat settings, Ollama cloud)
+9. Runs `Test-LocalSetup.ps1` and prints GPU / Headroom next steps
 
-`Setup-FullLocalStack.ps1` also force-refreshes Continue config and runs `Install-Codegraph.ps1` for `-ProjectPath` when available.
+`Setup-FullLocalStack.ps1` also force-refreshes VS Code Local AI and runs `Install-Codegraph.ps1` for `-ProjectPath` when available.
 
 ## Step 2 — verify
 
@@ -66,7 +69,9 @@ What `Setup-Machine.ps1` does:
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Install-Cursor.ps1 -CheckOnly
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
-.\scripts\Install-ContinueConfig.ps1 -CheckOnly
+.\scripts\Test-CursorOllama.ps1
+.\scripts\Test-VSCodeSetup.ps1
+.\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
 ```
 
 Manual equivalent:
@@ -89,15 +94,18 @@ ollama run qwen2.5-coder:7b "Say ready"
 
 `Setup-Machine.ps1` already runs these unless skipped. Re-run manually per [integrations.md](integrations.md) and README Cases H/I:
 
-**VS Code (Continue):**
+**VS Code Local AI (Continue chat + Cline agent):**
 
 ```powershell
-.\scripts\Install-ContinueConfig.ps1   # finds Code.exe, installs Continue, writes ~/.continue/config.json
+.\scripts\Install-VSCode.ps1              # if missing
+.\scripts\Install-VSCodeLocalAI.ps1       # Continue + Cline + verify
 # alias: .\scripts\Install-VSCodeConfig.ps1
-.\scripts\Install-ContinueConfig.ps1 -CheckOnly
+.\scripts\Test-VSCodeSetup.ps1            # full Case H check
+# alias: .\scripts\Test-VSCodeOllama.ps1
+# pieces: Install-ContinueConfig.ps1 / Install-ClineConfig.ps1
 ```
 
-Reload VS Code and select an Ollama model in Continue.
+Reload VS Code: **Continue** = ChatGPT-like chat/autocomplete; **Cline** = Cursor-like agent. Checklist: `config\vscode-ollama-local.example.md`.
 
 **Cursor:**
 
@@ -126,7 +134,7 @@ A **VM** can use a GPU with Ollama only if the guest already sees an NVIDIA devi
 ```powershell
 .\scripts\Start-HeadroomOllama.ps1
 .\scripts\Install-CursorConfig.ps1 -Headroom
-.\scripts\Install-ContinueConfig.ps1 -Headroom -Force
+.\scripts\Install-VSCodeLocalAI.ps1 -Headroom -Force
 ```
 
 Then use base URL `http://127.0.0.1:8787/v1` (key `ollama`) if configuring the UI by hand.
@@ -141,7 +149,7 @@ Then use base URL `http://127.0.0.1:8787/v1` (key `ollama`) if configuring the U
 # .\scripts\Install-Codegraph.ps1 -Elevated -ProjectPath "D:\path\to\app"
 ```
 
-Flow: **fnm** (no admin) → Node → `npm i -g @colbymchenry/codegraph` → `codegraph install --no-permissions` → `codegraph install` (with permissions) → `codegraph init` if `.codegraph` missing.
+Flow: **fnm** (preferred, no admin) → Node → `npm i -g @colbymchenry/codegraph` → `codegraph install --no-permissions` → `codegraph install` (with permissions) → **update Cursor + VS Code mcp.json** → `codegraph init` if `.codegraph` missing. System `node`/`npm` is used **only if fnm fails** (pass `-RequireFnm` to forbid fallback; `-SkipFnm` to force system only).
 
 Structural tools use the local graph. Pull `nomic-embed-text` only if your Codegraph build needs embeddings.
 
@@ -163,11 +171,12 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 - [ ] Repo root opened; README Cases A–O and FEATURES.md reviewed
 - [ ] `Setup-Machine.ps1` succeeded (or manual steps in README)
 - [ ] `Test-LocalSetup.ps1` / `Show-SetupStatus.ps1` report OK
-- [ ] Cursor installed (`Install-Cursor.ps1 -CheckOnly`) and Models wired (`Install-CursorConfig.ps1 -CheckOnly`)
-- [ ] VS Code Continue wired (`Install-ContinueConfig.ps1 -CheckOnly` / `Install-VSCodeConfig.ps1`)
+- [ ] Cursor installed (`Install-Cursor.ps1 -CheckOnly`) and Models wired (`Test-CursorOllama.ps1`)
+- [ ] VS Code Local AI wired (`Test-VSCodeSetup.ps1` / `Install-VSCodeLocalAI.ps1`)
+- [ ] Remotes disabled (`Disable-RemoteAIProviders.ps1 -CheckOnly`)
 - [ ] (Optional) Codegraph: `Install-Codegraph.ps1 -CheckOnly -ProjectPath <repo>`
 - [ ] (Optional) GPU checked / drivers installed
-- [ ] (Optional) Headroom on 8787 (`Install-CursorConfig.ps1 -Headroom` / `Install-ContinueConfig.ps1 -Headroom`)
+- [ ] (Optional) Headroom on 8787 (`Install-CursorConfig.ps1 -Headroom` / `Install-VSCodeLocalAI.ps1 -Headroom`)
 
 ## Failure handling
 
@@ -180,7 +189,8 @@ Details: [install-models-from-web.md](install-models-from-web.md), [trusted-sour
 | HF gated | Set `HF_TOKEN`, accept license on Hub |
 | Cursor missing | `.\scripts\Install-Cursor.ps1` (per-user; no admin) |
 | Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
-| VS Code / Continue not wired | `.\scripts\Install-ContinueConfig.ps1` (finds Code.exe) |
+| VS Code Local AI incomplete | `.\scripts\Install-VSCodeLocalAI.ps1 -Force` then `.\scripts\Test-VSCodeSetup.ps1` |
+| Remote/cloud models still on | Quit Cursor; `.\scripts\Disable-RemoteAIProviders.ps1` |
 | Codegraph missing | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
 | VM has no GPU in guest | Expose GPU from host first; `Install-GpuDrivers.ps1` explains this |
 | No admin / policy blocks EXE | Document block; user must allow OllamaSetup / CursorSetup or use IT whitelist |

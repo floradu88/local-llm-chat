@@ -150,6 +150,429 @@ function Test-LocalFilePresent {
   }
 }
 
+# --- fnm / Node (prefer fnm; system npm only as fallback) ---
+
+function Add-FnmCommonPaths {
+  foreach ($dir in @(
+      (Join-Path $env:LOCALAPPDATA "fnm"),
+      (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"),
+      (Join-Path $env:USERPROFILE ".local\bin"),
+      (Join-Path $env:LOCALAPPDATA "Programs\fnm")
+    )) {
+    if ($dir -and (Test-Path -LiteralPath $dir) -and ($env:Path -notlike "*$dir*")) {
+      $env:Path = "$dir;$env:Path"
+    }
+    $exe = Get-ChildItem -LiteralPath $dir -Filter "fnm.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($exe -and ($env:Path -notlike "*$($exe.DirectoryName)*")) {
+      $env:Path = "$($exe.DirectoryName);$env:Path"
+    }
+  }
+}
+
+function Initialize-FnmEnv {
+  Add-FnmCommonPaths
+  $fnm = Get-Command fnm -ErrorAction SilentlyContinue
+  if (-not $fnm) { return $false }
+  try {
+    $envOut = & fnm env --shell power-shell 2>$null
+    if ($envOut) {
+      $envOut | Out-String | Invoke-Expression
+    }
+  } catch {
+    try {
+      (& fnm env) | Out-String | Invoke-Expression
+    } catch { }
+  }
+  return [bool](Get-Command node -ErrorAction SilentlyContinue)
+}
+
+function Test-NodeIsFromFnm {
+  $node = Get-Command node -ErrorAction SilentlyContinue
+  if (-not $node) { return $false }
+  $src = [string]$node.Source
+  if ($src -match '(?i)[\\/]\.fnm[\\/]|[\\/]fnm_multishells[\\/]|[\\/]fnm[\\/]') { return $true }
+  if ($env:FNM_MULTISHELL_PATH -and $src -like "$($env:FNM_MULTISHELL_PATH)*") { return $true }
+  if ($env:FNM_DIR -and $src -like "$($env:FNM_DIR)*") { return $true }
+  return $false
+}
+
+function Get-NodeRuntimeInfo {
+  Add-FnmCommonPaths
+  [void](Initialize-FnmEnv)
+  $fnmCmd = Get-Command fnm -ErrorAction SilentlyContinue
+  $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+  $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
+  $fromFnm = Test-NodeIsFromFnm
+  $source = if (-not $nodeCmd) { "none" } elseif ($fromFnm) { "fnm" } else { "system" }
+  return [pscustomobject]@{
+    FnmPresent   = [bool]$fnmCmd
+    FnmPath      = if ($fnmCmd) { $fnmCmd.Source } else { $null }
+    NodePresent  = [bool]$nodeCmd
+    NodePath     = if ($nodeCmd) { $nodeCmd.Source } else { $null }
+    NodeVersion  = if ($nodeCmd) { try { (& node -v).Trim() } catch { $null } } else { $null }
+    NpmPresent   = [bool]$npmCmd
+    NpmPath      = if ($npmCmd) { $npmCmd.Source } else { $null }
+    FromFnm      = $fromFnm
+    Source       = $source
+  }
+}
+
+function Install-FnmIfMissing {
+  Add-FnmCommonPaths
+  if (Get-Command fnm -ErrorAction SilentlyContinue) {
+    return $true
+  }
+
+  Write-Host "  Installing fnm (per-user, no admin)..."
+  $winget = Get-Command winget -ErrorAction SilentlyContinue
+  if ($winget) {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+      & winget install --id Schniz.fnm -e --silent --accept-package-agreements --accept-source-agreements --disable-interactivity --scope user
+    } finally {
+      $ErrorActionPreference = $prev
+    }
+    $shim = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"
+    if ((Test-Path $shim) -and ($env:Path -notlike "*$shim*")) {
+      $env:Path = "$shim;$env:Path"
+    }
+    Add-FnmCommonPaths
+  }
+
+  if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
+    $fnmRoot = Join-Path $env:LOCALAPPDATA "fnm"
+    New-Item -ItemType Directory -Force -Path $fnmRoot | Out-Null
+    $api = "https://api.github.com/repos/Schniz/fnm/releases/latest"
+    Write-Host "  Resolving fnm release from GitHub..."
+    $rel = Invoke-RestMethod -Uri $api -Headers @{ "User-Agent" = "local-llm-chat" }
+    $asset = @($rel.assets) | Where-Object { $_.name -match "fnm-windows\.zip$|windows.*\.zip$" } | Select-Object -First 1
+    if (-not $asset) {
+      Write-Warning "Could not find fnm Windows zip on GitHub releases."
+      return $false
+    }
+    $zip = Join-Path $env:TEMP "fnm-windows.zip"
+    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
+    Expand-Archive -Path $zip -DestinationPath $fnmRoot -Force
+    $exe = Get-ChildItem -Path $fnmRoot -Recurse -Filter "fnm.exe" | Select-Object -First 1
+    if (-not $exe) {
+      Write-Warning "fnm.exe missing after extract"
+      return $false
+    }
+    if ($env:Path -notlike "*$($exe.DirectoryName)*") {
+      $env:Path = "$($exe.DirectoryName);$env:Path"
+    }
+    $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if ($userPath -notlike "*$($exe.DirectoryName)*") {
+      [Environment]::SetEnvironmentVariable("Path", "$($exe.DirectoryName);$userPath", "User")
+    }
+  }
+
+  Add-FnmCommonPaths
+  return [bool](Get-Command fnm -ErrorAction SilentlyContinue)
+}
+
+function Ensure-NodeViaFnm {
+  param([string] $Version = "lts-latest")
+
+  if (-not (Get-Command fnm -ErrorAction SilentlyContinue)) {
+    throw "fnm not on PATH"
+  }
+  Write-Host ("  Ensuring Node ({0}) via fnm..." -f $Version)
+  & fnm install $Version
+  if ($LASTEXITCODE -ne 0) { throw "fnm install $Version failed (exit $LASTEXITCODE)" }
+  & fnm use $Version
+  if ($LASTEXITCODE -ne 0) { throw "fnm use $Version failed (exit $LASTEXITCODE)" }
+  & fnm default $Version
+  [void](Initialize-FnmEnv)
+
+  $node = Get-Command node -ErrorAction SilentlyContinue
+  $npm = Get-Command npm -ErrorAction SilentlyContinue
+  if (-not $node -or -not $npm) {
+    throw "node/npm not available after fnm use"
+  }
+  if (-not (Test-NodeIsFromFnm)) {
+    Write-Warning ("  node resolved outside fnm multishell ({0}); PATH may need a new shell" -f $node.Source)
+  }
+  Write-Host ("  node (fnm): {0} @ {1}" -f (& node -v), $node.Source)
+  Write-Host ("  npm (fnm):  {0} @ {1}" -f (& npm -v), $npm.Source)
+}
+
+function Ensure-NodeRuntimePreferFnm {
+  <#
+  .SYNOPSIS
+    Prefer fnm-managed Node/npm; fall back to system Node/npm only if fnm fails.
+  #>
+  param(
+    [string] $Version = "lts-latest",
+    [switch] $SkipFnm,
+    [switch] $RequireFnm
+  )
+
+  if ($SkipFnm) {
+    Write-Host "  SkipFnm: using system node/npm only"
+    $npm = Get-Command npm -ErrorAction SilentlyContinue
+    $node = Get-Command node -ErrorAction SilentlyContinue
+    if (-not $npm -or -not $node) {
+      throw "-SkipFnm set but system node/npm not on PATH"
+    }
+    Write-Host ("  node (system): {0} @ {1}" -f (& node -v), $node.Source)
+    return (Get-NodeRuntimeInfo)
+  }
+
+  $fnmOk = $false
+  $fnmError = $null
+  try {
+    if (-not (Install-FnmIfMissing)) {
+      throw "fnm install/detection failed"
+    }
+    Write-Host ("  fnm OK: {0}" -f (Get-Command fnm).Source)
+    [void](Initialize-FnmEnv)
+    Ensure-NodeViaFnm -Version $Version
+    $fnmOk = $true
+  } catch {
+    $fnmError = $_
+    Write-Warning ("  fnm path failed: {0}" -f $_)
+  }
+
+  if ($fnmOk) {
+    return (Get-NodeRuntimeInfo)
+  }
+
+  if ($RequireFnm) {
+    throw "fnm is required but failed: $fnmError"
+  }
+
+  Write-Host "  Falling back to system node/npm (fnm preferred but unavailable)..."
+  $node = Get-Command node -ErrorAction SilentlyContinue
+  $npm = Get-Command npm -ErrorAction SilentlyContinue
+  if (-not $node -or -not $npm) {
+    throw "Neither fnm nor system node/npm is available. Install fnm (winget install Schniz.fnm) or Node.js, then re-run."
+  }
+  Write-Host ("  node (system fallback): {0} @ {1}" -f (& node -v), $node.Source)
+  Write-Host ("  npm  (system fallback): {0} @ {1}" -f (& npm -v), $npm.Source)
+  return (Get-NodeRuntimeInfo)
+}
+
+function Get-FnmDefaultNodePath {
+  $fnmDir = $env:FNM_DIR
+  if (-not $fnmDir) { $fnmDir = Join-Path $env:APPDATA "fnm" }
+  foreach ($candidate in @(
+      (Join-Path $fnmDir "aliases\default\node.exe"),
+      (Join-Path $fnmDir "aliases\lts-latest\node.exe")
+    )) {
+    if (Test-Path -LiteralPath $candidate) {
+      return (Resolve-Path -LiteralPath $candidate).Path
+    }
+  }
+  $versions = Join-Path $fnmDir "node-versions"
+  if (Test-Path -LiteralPath $versions) {
+    $node = Get-ChildItem -LiteralPath $versions -Recurse -Filter "node.exe" -ErrorAction SilentlyContinue |
+      Sort-Object FullName -Descending |
+      Select-Object -First 1
+    if ($node) { return $node.FullName }
+  }
+  return $null
+}
+
+function Get-CodegraphShimPath {
+  $candidates = @(
+    (Join-Path $env:APPDATA "npm\node_modules\@colbymchenry\codegraph\npm-shim.js"),
+    (Join-Path $env:APPDATA "npm\node_modules\@colbymchenry\codegraph\dist\cli.js")
+  )
+  try {
+    [void](Initialize-FnmEnv)
+    $root = (& npm root -g 2>$null)
+    if ($root) {
+      $candidates = @(
+        (Join-Path $root "@colbymchenry\codegraph\npm-shim.js"),
+        (Join-Path $root "@colbymchenry\codegraph\dist\cli.js")
+      ) + $candidates
+    }
+  } catch { }
+  foreach ($c in $candidates) {
+    if ($c -and (Test-Path -LiteralPath $c)) {
+      return (Resolve-Path -LiteralPath $c).Path
+    }
+  }
+  return $null
+}
+
+function Get-CodegraphMcpLaunchInfo {
+  <#
+  .SYNOPSIS
+    Resolve a GUI-safe Codegraph MCP launch command (prefer fnm default node + npm-shim).
+  #>
+  [void](Initialize-FnmEnv)
+  $shim = Get-CodegraphShimPath
+  $fnmNode = Get-FnmDefaultNodePath
+  $cmdPath = Join-Path $env:APPDATA "npm\codegraph.cmd"
+
+  if ($fnmNode -and $shim) {
+    return [pscustomobject]@{
+      Command = $fnmNode
+      ArgList = @($shim, "serve", "--mcp", "--path", '${workspaceFolder}')
+      Mode    = "fnm-node+shim"
+      Shim    = $shim
+      Node    = $fnmNode
+    }
+  }
+  if ((Test-Path -LiteralPath $cmdPath) -and $shim) {
+    return [pscustomobject]@{
+      Command = (Resolve-Path -LiteralPath $cmdPath).Path
+      ArgList = @("serve", "--mcp", "--path", '${workspaceFolder}')
+      Mode    = "codegraph.cmd"
+      Shim    = $shim
+      Node    = $null
+    }
+  }
+  return [pscustomobject]@{
+    Command = "codegraph"
+    ArgList = @("serve", "--mcp", "--path", '${workspaceFolder}')
+    Mode    = "path-codegraph"
+    Shim    = $shim
+    Node    = $fnmNode
+  }
+}
+
+function Get-CursorMcpJsonPath {
+  Join-Path $env:USERPROFILE ".cursor\mcp.json"
+}
+
+function Get-VSCodeMcpJsonPath {
+  $info = Get-VSCodeInstallInfo
+  Join-Path $info.UserDataPath "User\mcp.json"
+}
+
+function Get-CodegraphMcpJsonStatus {
+  $launch = Get-CodegraphMcpLaunchInfo
+  $cursorPath = Get-CursorMcpJsonPath
+  $vscodePath = Get-VSCodeMcpJsonPath
+  $cursorOk = $false
+  $vscodeOk = $false
+  if (Test-Path -LiteralPath $cursorPath) {
+    try {
+      $j = Get-Content -LiteralPath $cursorPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      $cursorOk = [bool]($j.mcpServers -and $j.mcpServers.codegraph)
+    } catch { }
+  }
+  if (Test-Path -LiteralPath $vscodePath) {
+    try {
+      $j = Get-Content -LiteralPath $vscodePath -Raw -Encoding UTF8 | ConvertFrom-Json
+      $vscodeOk = [bool]($j.servers -and $j.servers.codegraph)
+    } catch { }
+  }
+  return [pscustomobject]@{
+    CursorPath    = $cursorPath
+    VSCodePath    = $vscodePath
+    CursorHas     = $cursorOk
+    VSCodeHas     = $vscodeOk
+    LaunchMode    = $launch.Mode
+    LaunchCommand = $launch.Command
+  }
+}
+
+function Set-McpServerEntryInJsonFile {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][ValidateSet("cursor", "vscode")][string] $Flavor,
+    [Parameter(Mandatory = $true)][string] $ServerName,
+    [Parameter(Mandatory = $true)][string] $Command,
+    [Parameter(Mandatory = $true)][string[]] $ArgList
+  )
+
+  $dir = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $dir)) {
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  }
+
+  $rootKey = if ($Flavor -eq "cursor") { "mcpServers" } else { "servers" }
+  $obj = [ordered]@{}
+  if (Test-Path -LiteralPath $Path) {
+    $bakDir = Join-Path $dir "local-llm-chat-backups"
+    New-Item -ItemType Directory -Force -Path $bakDir | Out-Null
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    Copy-Item -LiteralPath $Path -Destination (Join-Path $bakDir ("mcp-{0}.json.bak" -f $stamp)) -Force
+    try {
+      $existing = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+      foreach ($p in $existing.PSObject.Properties) {
+        $obj[$p.Name] = $p.Value
+      }
+    } catch {
+      Write-Warning "Could not parse existing $Path - rewriting with codegraph entry only"
+      $obj = [ordered]@{}
+    }
+  }
+
+  $servers = [ordered]@{}
+  if ($obj.Contains($rootKey) -and $obj[$rootKey]) {
+    $existingServers = $obj[$rootKey]
+    if ($existingServers -is [System.Management.Automation.PSCustomObject]) {
+      foreach ($p in $existingServers.PSObject.Properties) {
+        $servers[$p.Name] = $p.Value
+      }
+    }
+  }
+
+  $servers[$ServerName] = [ordered]@{
+    type    = "stdio"
+    command = $Command
+    args    = @($ArgList)
+  }
+  $obj[$rootKey] = $servers
+
+  $json = ($obj | ConvertTo-Json -Depth 12)
+  [System.IO.File]::WriteAllText($Path, $json, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Update-CodegraphMcpJsonFiles {
+  <#
+  .SYNOPSIS
+    Write/merge Codegraph MCP server into Cursor (~/.cursor/mcp.json) and VS Code (%APPDATA%\Code\User\mcp.json).
+  #>
+  param(
+    [string] $ProjectPath = "",
+    [switch] $WriteWorkspaceFiles,
+    [switch] $PortableCommand
+  )
+
+  $launch = Get-CodegraphMcpLaunchInfo
+  if ($PortableCommand) {
+    $launch = [pscustomobject]@{
+      Command = "codegraph"
+      ArgList = @("serve", "--mcp", "--path", '${workspaceFolder}')
+      Mode    = "path-codegraph"
+    }
+  }
+
+  $cursorPath = Get-CursorMcpJsonPath
+  $vscodePath = Get-VSCodeMcpJsonPath
+  $serverArgs = [string[]]@($launch.ArgList)
+
+  Set-McpServerEntryInJsonFile -Path $cursorPath -Flavor cursor -ServerName "codegraph" -Command $launch.Command -ArgList $serverArgs
+  Set-McpServerEntryInJsonFile -Path $vscodePath -Flavor vscode -ServerName "codegraph" -Command $launch.Command -ArgList $serverArgs
+
+  $workspace = @()
+  if ($WriteWorkspaceFiles -and $ProjectPath -and (Test-Path -LiteralPath $ProjectPath)) {
+    $cursorWs = Join-Path $ProjectPath ".cursor\mcp.json"
+    $vscodeWs = Join-Path $ProjectPath ".vscode\mcp.json"
+    # Workspace files stay portable (command on PATH) so they are safe to commit
+    $portableArgs = [string[]]@("serve", "--mcp", "--path", '${workspaceFolder}')
+    Set-McpServerEntryInJsonFile -Path $cursorWs -Flavor cursor -ServerName "codegraph" -Command "codegraph" -ArgList $portableArgs
+    Set-McpServerEntryInJsonFile -Path $vscodeWs -Flavor vscode -ServerName "codegraph" -Command "codegraph" -ArgList $portableArgs
+    $workspace = @($cursorWs, $vscodeWs)
+  }
+
+  return [pscustomobject]@{
+    CursorPath = $cursorPath
+    VSCodePath = $vscodePath
+    Workspace  = $workspace
+    LaunchMode = $launch.Mode
+    Command    = $launch.Command
+    ArgList    = $serverArgs
+  }
+}
+
 function Get-CursorExeCandidates {
   @(
     (Join-Path $env:LOCALAPPDATA "Programs\Cursor\Cursor.exe"),
@@ -321,6 +744,9 @@ function Get-ContinueOllamaConfigStatus {
       Path        = $path
       ApiBase     = $null
       Models      = @()
+      HasAutocomplete = $false
+      RemoteEntries = @()
+      LocalOnly   = $false
       Message     = "Continue config missing"
       InstallInfo = $info
     }
@@ -335,6 +761,9 @@ function Get-ContinueOllamaConfigStatus {
       Path        = $path
       ApiBase     = $null
       Models      = @()
+      HasAutocomplete = $false
+      RemoteEntries = @("config.json:parse-error")
+      LocalOnly   = $false
       Message     = "Continue config JSON invalid: $_"
       InstallInfo = $info
     }
@@ -352,15 +781,278 @@ function Get-ContinueOllamaConfigStatus {
   }
 
   $configured = $models.Count -gt 0
+  $hasAutocomplete = $false
+  try {
+    if ($cfg.tabAutocompleteModel -and $cfg.tabAutocompleteModel.model) {
+      $hasAutocomplete = $true
+    }
+  } catch { }
+
+  $remoteInfo = Get-ContinueRemoteProviderStatus
   return [pscustomobject]@{
-    Ok          = $true
-    Configured  = $configured
-    Path        = $path
-    ApiBase     = $apiBase
-    Models      = $models
-    Message     = if ($configured) { "Continue wired to local models" } else { "Continue config has no local Ollama/OpenAI models" }
-    InstallInfo = $info
+    Ok               = $true
+    Configured       = $configured
+    Path             = $path
+    ApiBase          = $apiBase
+    Models           = $models
+    HasAutocomplete  = $hasAutocomplete
+    RemoteEntries    = @($remoteInfo.RemoteEntries)
+    LocalOnly        = [bool]$remoteInfo.LocalOnly
+    Message          = if ($configured) { "Continue wired to local models (chat + autocomplete)" } else { "Continue config has no local Ollama/OpenAI models" }
+    InstallInfo      = $info
   }
+}
+
+function Get-ClineDataPaths {
+  $root = Join-Path $HOME ".cline"
+  $data = Join-Path $root "data"
+  return [pscustomobject]@{
+    Root            = $root
+    DataDir         = $data
+    ProvidersPath   = (Join-Path $data "settings\providers.json")
+    GlobalStatePath = (Join-Path $data "globalState.json")
+    SettingsDir     = (Join-Path $data "settings")
+  }
+}
+
+function Get-ClineOllamaConfigStatus {
+  <#
+  .SYNOPSIS
+    Check ~/.cline providers.json / globalState.json for Ollama (Cursor-like agent).
+  #>
+  $paths = Get-ClineDataPaths
+  $info = Get-VSCodeInstallInfo
+  $model = $null
+  $baseUrl = $null
+  $source = $null
+
+  if (Test-Path -LiteralPath $paths.ProvidersPath) {
+    try {
+      $cfg = Get-Content -LiteralPath $paths.ProvidersPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($cfg.lastUsedProvider -eq "ollama" -and $cfg.providers -and $cfg.providers.ollama) {
+        $settings = $cfg.providers.ollama.settings
+        if ($settings) {
+          $model = [string]$settings.model
+          $baseUrl = [string]$settings.baseUrl
+          $source = "providers.json"
+        }
+      }
+    } catch { }
+  }
+
+  if (-not $model -and (Test-Path -LiteralPath $paths.GlobalStatePath)) {
+    try {
+      $gs = Get-Content -LiteralPath $paths.GlobalStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($gs.actModeApiProvider -eq "ollama" -or $gs.planModeApiProvider -eq "ollama") {
+        $model = [string]$(if ($gs.actModeOllamaModelId) { $gs.actModeOllamaModelId } else { $gs.planModeOllamaModelId })
+        $baseUrl = [string]$(if ($gs.actModeOllamaBaseUrl) { $gs.actModeOllamaBaseUrl } else { $gs.ollamaBaseUrl })
+        $source = "globalState.json"
+      }
+    } catch { }
+  }
+
+  $localBase = $baseUrl -and ($baseUrl -match "11434|8787|localhost|127\.0\.0\.1")
+  $configured = [bool]($model -and $localBase)
+
+  $remoteProviders = @()
+  if (Test-Path -LiteralPath $paths.ProvidersPath) {
+    try {
+      $pcfg = Get-Content -LiteralPath $paths.ProvidersPath -Raw -Encoding UTF8 | ConvertFrom-Json
+      if ($pcfg.providers) {
+        foreach ($p in $pcfg.providers.PSObject.Properties) {
+          $id = [string]$p.Name
+          if ($id -and $id -ne "ollama" -and $id -ne "lmstudio") {
+            $remoteProviders += $id
+          } elseif ($id -eq "ollama") {
+            $b = [string]$p.Value.settings.baseUrl
+            if ($b -and -not (Test-IsLocalLlmEndpoint $b)) { $remoteProviders += "ollama(non-local)" }
+          }
+        }
+      }
+      if ($pcfg.lastUsedProvider -and $pcfg.lastUsedProvider -notin @("ollama", "lmstudio")) {
+        $remoteProviders += ("lastUsed:" + $pcfg.lastUsedProvider)
+      }
+    } catch { }
+  }
+  if (Test-Path -LiteralPath $paths.GlobalStatePath) {
+    try {
+      $gs = Get-Content -LiteralPath $paths.GlobalStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
+      foreach ($mode in @("actModeApiProvider", "planModeApiProvider")) {
+        $v = [string]$gs.$mode
+        if ($v -and $v -notin @("ollama", "lmstudio", "")) {
+          $remoteProviders += ("${mode}:$v")
+        }
+      }
+    } catch { }
+  }
+  $remoteProviders = @($remoteProviders | Select-Object -Unique)
+
+  return [pscustomobject]@{
+    Ok                 = $true
+    Configured         = $configured
+    Model              = $model
+    BaseUrl            = $baseUrl
+    Source             = $source
+    Paths              = $paths
+    RemoteProviders    = $remoteProviders
+    LocalOnly          = ($configured -and $remoteProviders.Count -eq 0)
+    Message            = if ($configured) { "Cline wired to local Ollama ($source)" } else { "Cline not configured for local Ollama" }
+    InstallInfo        = $info
+  }
+}
+
+function Test-IsLocalLlmEndpoint {
+  param([string] $Url)
+  if ([string]::IsNullOrWhiteSpace($Url)) { return $false }
+  $u = $Url.Trim().ToLowerInvariant()
+  if ($u -match 'localhost|127\.0\.0\.1|\[::1\]') { return $true }
+  if ($u -match ':11434|:8787') { return $true }
+  return $false
+}
+
+function Get-CloudProviderIdList {
+  @(
+    "anthropic", "openai", "openai-native", "openai-codex", "openrouter", "bedrock",
+    "gemini", "google", "vertex", "xai", "grok", "groq", "together", "fireworks",
+    "deepseek", "mistral", "azure", "azure-openai", "vscode-lm", "copilot",
+    "chatgpt", "cursor", "cline", "sambanova", "cerebras", "moonshot", "qwen",
+    "huggingface", "nebius", "asksage", "watsonx", "ibm", "litellm", "requesty",
+    "artificialanalysis", "claude", "gpt"
+  )
+}
+
+function Test-ContinueModelEntryIsLocal {
+  param($Entry)
+  if (-not $Entry) { return $false }
+  $provider = [string]$Entry.provider
+  $base = [string]$Entry.apiBase
+  if ($provider -eq "ollama") {
+    if (-not $base) { return $true }
+    return (Test-IsLocalLlmEndpoint $base)
+  }
+  if ($provider -eq "openai" -or $provider -eq "openai-compatible") {
+    return (Test-IsLocalLlmEndpoint $base)
+  }
+  # lmstudio / llama.cpp local servers
+  if ($provider -match "^(lmstudio|llamacpp|llama\.cpp)$") {
+    return (Test-IsLocalLlmEndpoint $base) -or (-not $base)
+  }
+  return $false
+}
+
+function Get-ContinueRemoteProviderStatus {
+  $info = Get-VSCodeInstallInfo
+  $path = $info.ContinueConfig
+  $yamlPath = Join-Path $info.ContinueDir "config.yaml"
+  $remote = @()
+  $localCount = 0
+
+  if (Test-Path -LiteralPath $path) {
+    try {
+      $cfg = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+      foreach ($m in @($cfg.models)) {
+        if (Test-ContinueModelEntryIsLocal $m) { $localCount++ }
+        else {
+          $label = "$(if ($m.provider) { $m.provider } else { '?' }):$(if ($m.model) { $m.model } else { '?' })"
+          if ($m.apiBase -and -not (Test-IsLocalLlmEndpoint $m.apiBase)) {
+            $label += "@$($m.apiBase)"
+          }
+          $remote += $label
+        }
+      }
+      if ($cfg.tabAutocompleteModel -and -not (Test-ContinueModelEntryIsLocal $cfg.tabAutocompleteModel)) {
+        $remote += "tabAutocomplete:$($cfg.tabAutocompleteModel.provider)/$($cfg.tabAutocompleteModel.model)"
+      }
+    } catch {
+      $remote += "config.json:parse-error"
+    }
+  }
+
+  if (Test-Path -LiteralPath $yamlPath) {
+    try {
+      $raw = Get-Content -LiteralPath $yamlPath -Raw -Encoding UTF8
+      foreach ($pat in @("api\.openai\.com", "api\.anthropic\.com", "openrouter\.ai", "generativelanguage\.googleapis", "api\.x\.ai", "api\.groq\.com", "provider:\s*anthropic", "provider:\s*gemini", "provider:\s*groq", "provider:\s*xai", "provider:\s*openrouter", "provider:\s*bedrock")) {
+        if ($raw -match $pat) { $remote += "config.yaml:$pat"; break }
+      }
+    } catch { }
+  }
+
+  return [pscustomobject]@{
+    Path            = $path
+    YamlPath        = $yamlPath
+    LocalModelCount = $localCount
+    RemoteEntries   = @($remote | Select-Object -Unique)
+    LocalOnly       = ($remote.Count -eq 0 -and $localCount -gt 0)
+  }
+}
+
+function Merge-JsonSettingsFile {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][hashtable] $Settings
+  )
+  $dir = Split-Path -Parent $Path
+  if (-not (Test-Path -LiteralPath $dir)) {
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  }
+  $obj = [ordered]@{}
+  if (Test-Path -LiteralPath $Path) {
+    try {
+      $existing = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+      foreach ($p in $existing.PSObject.Properties) {
+        $obj[$p.Name] = $p.Value
+      }
+    } catch {
+      $bak = "$Path.bak-local-llm-chat"
+      Copy-Item -LiteralPath $Path -Destination $bak -Force
+    }
+  }
+  foreach ($k in $Settings.Keys) {
+    $obj[$k] = $Settings[$k]
+  }
+  $json = ($obj | ConvertTo-Json -Depth 12)
+  [System.IO.File]::WriteAllText($Path, $json, [System.Text.UTF8Encoding]::new($false))
+}
+
+function Get-EditorLocalOnlySettingsHashtable {
+  return @{
+    "github.copilot.enable"                        = @{ "*" = $false }
+    "github.copilot.editor.enableAutoCompletions"  = $false
+    "github.copilot.nexEditSuggestions.enabled"    = $false
+    "chat.agent.enabled"                           = $false
+    "chat.disableAIFeatures"                       = $true
+  }
+}
+
+function Set-OllamaCloudDisabled {
+  param([switch] $Persistent)
+  $env:OLLAMA_NO_CLOUD = "1"
+  if ($Persistent) {
+    [Environment]::SetEnvironmentVariable("OLLAMA_NO_CLOUD", "1", "User")
+  }
+  $ollamaHome = Join-Path $HOME ".ollama"
+  $serverJson = Join-Path $ollamaHome "server.json"
+  New-Item -ItemType Directory -Force -Path $ollamaHome | Out-Null
+  $cfg = @{}
+  if (Test-Path -LiteralPath $serverJson) {
+    try {
+      $cfg = Get-Content -LiteralPath $serverJson -Raw -Encoding UTF8 | ConvertFrom-Json
+      $hash = [ordered]@{}
+      foreach ($p in $cfg.PSObject.Properties) { $hash[$p.Name] = $p.Value }
+      $cfg = $hash
+    } catch {
+      $cfg = [ordered]@{}
+    }
+  } else {
+    $cfg = [ordered]@{}
+  }
+  if ($cfg -isnot [System.Collections.IDictionary]) {
+    $cfg = [ordered]@{}
+  }
+  $cfg["disable_ollama_cloud"] = $true
+  $json = ($cfg | ConvertTo-Json -Depth 8)
+  [System.IO.File]::WriteAllText($serverJson, $json, [System.Text.UTF8Encoding]::new($false))
+  return $serverJson
 }
 
 function Get-CursorOllamaConfigStatus {

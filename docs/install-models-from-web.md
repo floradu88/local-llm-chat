@@ -163,7 +163,8 @@ See README **Copy-paste: three example coding models**.
 Wire editors (finds installs + writes config):
 
 ```powershell
-.\scripts\Install-ContinueConfig.ps1   # VS Code + Continue
+.\scripts\Install-VSCodeLocalAI.ps1    # VS Code Continue + Cline
+.\scripts\Test-VSCodeSetup.ps1         # full Case H verify
 .\scripts\Install-CursorConfig.ps1     # quit Cursor first
 ```
 

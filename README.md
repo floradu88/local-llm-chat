@@ -70,7 +70,7 @@ No Ollama yet. Want coding models + later IDE wiring.
 # or: -Tier 16GB
 ```
 
-That sets `OLLAMA_MODELS` to `.\models\ollama`, installs Ollama (per-user, no admin), checks/installs **Cursor** if missing, pulls models for your RAM tier **skipping tags already on disk**, wires **Cursor Models → Ollama** and **VS Code Continue → Ollama** when possible, then verifies.
+That sets `OLLAMA_MODELS` to `.\models\ollama`, installs Ollama (per-user, no admin), checks/installs **Cursor** if missing, pulls models for your RAM tier **skipping tags already on disk**, wires **Cursor Models → Ollama** and **VS Code Local AI (Continue + Cline)** when possible, then verifies.
 
 **Other RAM tiers:**
 
@@ -166,19 +166,33 @@ Gated Hub models: set `$env:HF_TOKEN = "hf_..."` (or `-Token`) after accepting t
 
 ---
 
-### Case H — Wire VS Code (Continue) after models work
+### Case H — Wire VS Code Local AI (Continue + Cline) after models work
 
-Finds VS Code, installs the Continue extension (if `code` CLI works), and writes `~\.continue\config.json` with tags from `ollama list`:
+Gives you **ChatGPT-like chat + autocomplete** (Continue) and a **Cursor-like agent** (Cline) on local Ollama.
 
 ```powershell
-.\scripts\Install-ContinueConfig.ps1
-# alias:
-.\scripts\Install-VSCodeConfig.ps1
-.\scripts\Install-ContinueConfig.ps1 -CheckOnly
-# .\scripts\Install-ContinueConfig.ps1 -Force -Headroom
+.\scripts\Install-VSCode.ps1                 # per-user install if Code missing
+.\scripts\Install-VSCodeLocalAI.ps1          # Continue + Cline + Test-VSCodeSetup
+.\scripts\Install-VSCodeLocalAI.ps1 -CheckOnly
+.\scripts\Test-VSCodeSetup.ps1               # full config check anytime
+# alias: .\scripts\Test-VSCodeOllama.ps1
+# pieces:
+# .\scripts\Install-ContinueConfig.ps1 -Force   # chat only
+# .\scripts\Install-ClineConfig.ps1 -Force      # agent only
+# .\scripts\Install-VSCodeLocalAI.ps1 -Headroom -Force
 ```
 
-Reload VS Code, open Continue, pick an Ollama model. Details: [docs/integrations.md](docs/integrations.md).
+Reload VS Code: use **Continue** for sidebar chat / tab complete; use **Cline** for multi-file agent tasks. Checklist: [config/vscode-ollama-local.example.md](config/vscode-ollama-local.example.md). Details: [docs/integrations.md](docs/integrations.md).
+
+**Disable remote/cloud providers** (OpenAI, Cursor catalog, Grok, Copilot, …):
+
+```powershell
+# Quit Cursor first, then:
+.\scripts\Disable-RemoteAIProviders.ps1
+.\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
+```
+
+See [config/local-only-ai.example.md](config/local-only-ai.example.md).
 
 ---
 
@@ -216,9 +230,9 @@ Manual UI fallback: Settings → Models with the same URL/key. Checklist: [confi
 Then point Cursor/clients at Headroom:
 
 ```powershell
-.\scripts\Install-CursorConfig.ps1 -Headroom
+.\scripts\Install-VSCodeLocalAI.ps1 -Headroom -Force
 # and/or:
-.\scripts\Install-ContinueConfig.ps1 -Headroom -Force
+.\scripts\Install-CursorConfig.ps1 -Headroom
 ```
 
 Or set base URL `http://127.0.0.1:8787/v1` (key still `ollama`) in the UI. Leave the Headroom terminal open while using it.
@@ -227,7 +241,7 @@ Or set base URL `http://127.0.0.1:8787/v1` (key still `ollama`) in the UI. Leave
 
 ### Case K — Codegraph on this (or another) project
 
-Install Node via **fnm** (no admin), install Codegraph CLI, wire agents (`--no-permissions` then with permissions), then `codegraph init` if `.codegraph` is missing:
+Install Node via **fnm** (preferred, no admin; system npm only if fnm fails), install Codegraph CLI, wire agents, **update Cursor + VS Code MCP JSON**, then `codegraph init` if `.codegraph` is missing:
 
 ```powershell
 # This toolkit repo:
@@ -236,10 +250,10 @@ Install Node via **fnm** (no admin), install Codegraph CLI, wire agents (`--no-p
 # Or your app:
 .\scripts\Install-Codegraph.ps1 -ProjectPath "D:\path\to\your-app"
 .\scripts\Install-Codegraph.ps1 -CheckOnly -ProjectPath "D:\path\to\your-app"
-
-# Optional: second agent-permissions pass elevated (UAC)
-# .\scripts\Install-Codegraph.ps1 -Elevated -ProjectPath "D:\path\to\your-app"
+# .\scripts\Install-Codegraph.ps1 -WriteWorkspaceMcp -ProjectPath "D:\path\to\your-app"
 ```
+
+MCP files: `%USERPROFILE%\.cursor\mcp.json` and `%APPDATA%\Code\User\mcp.json` (see [config/codegraph-mcp.example.md](config/codegraph-mcp.example.md)).
 
 Alias for init-only when CLI already exists: `.\scripts\Initialize-Codegraph.ps1 -ProjectPath "..."`.
 
@@ -257,8 +271,12 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 .\scripts\Test-LocalSetup.ps1
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Install-ContinueConfig.ps1 -CheckOnly
+.\scripts\Install-ClineConfig.ps1 -CheckOnly
+.\scripts\Test-VSCodeSetup.ps1
+# alias: .\scripts\Test-VSCodeOllama.ps1
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
 .\scripts\Test-CursorOllama.ps1
+.\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
 # optional: .\scripts\Test-LocalSetup.ps1 -Model qwen2.5-coder:7b
 ```
 
@@ -269,9 +287,11 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 | Script won’t run | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | Pull too large / OOM | Re-run with `-Tier 8GB` or Case E |
 | Execution / SmartScreen blocks installer | Allow `OllamaSetup.exe` or ask IT to whitelist |
-| H-cfg red (Continue) | `.\scripts\Install-ContinueConfig.ps1 -Force` |
+| H / H-cfg / H-agent red | `.\scripts\Install-VSCodeLocalAI.ps1 -Force` then `.\scripts\Test-VSCodeSetup.ps1` |
+| L-vscode red | `.\scripts\Test-VSCodeSetup.ps1` (script missing) or re-run LocalAI |
+| Remote models still on | Quit Cursor; `.\scripts\Disable-RemoteAIProviders.ps1` |
 | I-cfg red (Cursor Models) | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
-| K / K-cli red (Codegraph) | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
+| K / K-cli / K-node red (Codegraph) | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` (fnm preferred) |
 
 ---
 
@@ -378,9 +398,9 @@ Prompts to map/understand code faster: [docs/code-understanding-prompts.md](docs
 
 ### Suggested order for a brand-new clone
 
-1. **Case A** (or B if Ollama exists) — `Setup-Machine.ps1` installs Ollama/Cursor, pulls models, wires **Cursor** + **VS Code Continue** to Ollama, then verifies  
-2. **Case L** / `Show-SetupStatus.ps1` — confirm H/H-cfg and I/I-cfg are green  
-3. Re-run **Case H** / **Case I** only if editor config was skipped or failed (`Install-ContinueConfig.ps1` / quit Cursor then `Install-CursorConfig.ps1`)  
+1. **Case A** (or B if Ollama exists) — `Setup-Machine.ps1` installs Ollama/Cursor, pulls models, wires **Cursor** + **VS Code Local AI (Continue + Cline)** to Ollama, then verifies
+2. **Case L** / `Show-SetupStatus.ps1` — confirm H/H-cfg/H-agent, I/I-cfg, and L-vscode are green
+3. Re-run **Case H** / **Case I** only if editor config was skipped or failed (`Install-VSCodeLocalAI.ps1` then `Test-VSCodeSetup.ps1` / quit Cursor then `Install-CursorConfig.ps1`)
 4. Optional: **Case N** (GPU), **Case J** (Headroom + `-Headroom` on editor scripts), **Case K** (Codegraph), **Case F/G/M** (extra models)
 
 Agents/LLMs in this repo: read [AGENTS.md](AGENTS.md), [FEATURES.md](FEATURES.md), and [docs/agent-setup-playbook.md](docs/agent-setup-playbook.md). Cursor always loads [`.cursor/rules/local-llm-setup.mdc`](.cursor/rules/local-llm-setup.mdc).
@@ -401,7 +421,7 @@ Codegraph MCP ──────────────────────
 - Optional GPU: NVIDIA (driver ≥ 551.61) or AMD (ROCm/Vulkan) — see [Ollama Windows docs](https://docs.ollama.com/windows) and `Install-GpuDrivers.ps1`
 - PowerShell 5.1+ (Windows built-in is fine)
 - Optional: Cursor desktop (installed by `Install-Cursor.ps1` / `Setup-Machine.ps1` if missing; Models wired by `Install-CursorConfig.ps1`)
-- Optional: VS Code + Continue (`Install-ContinueConfig.ps1` / `Install-VSCodeConfig.ps1` — finds Code.exe, installs extension, writes `~\.continue\config.json`)
+- Optional: VS Code Local AI — Continue chat + Cline agent (`Install-VSCodeLocalAI.ps1` / `Install-VSCodeConfig.ps1`; pieces: `Install-VSCode.ps1`, `Install-ContinueConfig.ps1`, `Install-ClineConfig.ps1`)
 
 ## Best local coding models
 
@@ -426,7 +446,7 @@ Copy-paste pulls for the three primary examples are at the top of **First time a
 AGENTS.md       instructions for local agents / LLMs
 FEATURES.md     shipped features + per-machine checklist
 docs/           setup playbook, trusted sources, imports, integrations
-scripts/        PowerShell install / download / import / Cursor / VS Code Continue / GPU / Headroom / Setup-Machine
+scripts/        PowerShell install / download / import / Cursor / VS Code Local AI (Continue+Cline) / GPU / Headroom / Setup-Machine
 config/         Modelfile + Continue / Cursor examples
 models/gguf/    downloaded .gguf files (gitignored)
 models/ollama/  optional OLLAMA_MODELS root (gitignored)
@@ -453,9 +473,10 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 |--------|------|
 | `scripts/Setup-FullLocalStack.ps1` | **Full scenario:** Ollama + Cursor + models + Continue + codegraph init + verify |
 | `scripts/Initialize-Codegraph.ps1` | Index a project (`codegraph init`); runs `Install-Codegraph.ps1` if CLI missing |
-| `scripts/Install-Codegraph.ps1` | fnm → Node → npm Codegraph → agent install (`--no-permissions` then permissions) → init |
-| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + Ollama + Cursor install + pulls + Cursor/VS Code Ollama config + verify (`-Tier Auto`) |
-| `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–O (VS Code/Continue H/H-cfg, Cursor I/I-cfg, GPU-DRV, …) |
+| `scripts/Install-Codegraph.ps1` | fnm preferred → npm Codegraph → agent install → **Cursor + VS Code mcp.json** → init |
+
+| `scripts/Setup-Machine.ps1` | **One-shot** after clone: env + Ollama + Cursor install + pulls + Cursor/VS Code Local AI config + verify (`-Tier Auto`) |
+| `scripts/Show-SetupStatus.ps1` | Green/red dashboard for Cases A–O (VS Code H/H-cfg/H-agent, Cursor I/I-cfg, L-vscode, GPU-DRV, …) |
 | `scripts/Invoke-ParallelModels.ps1` | Same prompt to multiple models concurrently |
 | `scripts/Invoke-ModelWorkflow.ps1` | DraftReview / PlanImplement / CompareJudge pipelines |
 | `scripts/Test-GpuSupport.ps1` | Non-admin GPU/Ollama/VM check; `-Elevated` for admin UAC driver check |
@@ -464,13 +485,20 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Invoke-Elevated.ps1` | Generic `Start-Process -Verb RunAs` launcher for any script |
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
 | `scripts/Test-CursorOllama.ps1` | Verify Cursor Models config + OpenAI `/v1/chat/completions` smoke |
+| `scripts/Test-ContinueOllama.ps1` | Verify Continue chat config + Ollama smoke |
+| `scripts/Test-VSCodeSetup.ps1` | Full VS Code Case H check (extensions, Continue, Cline, MCP, local-only) |
+| `scripts/Test-VSCodeOllama.ps1` | Alias for Test-VSCodeSetup.ps1 |
+| `scripts/Disable-RemoteAIProviders.ps1` | Disable remote/cloud providers for Cursor + VS Code (+ Ollama cloud) |
 | `scripts/Update-CodingModels.ps1` | Force re-pull / refresh tier models |
 | `scripts/Uninstall-Ollama.ps1` | Uninstall guidance + optional model cleanup |
 | `scripts/Eval-CodingModel.ps1` | Run sample coding prompts against a local model |
 | `scripts/Set-OllamaEnv.ps1` | Set `OLLAMA_MODELS` / install dir |
 | `scripts/Install-Ollama.ps1` | Official per-user install |
-| `scripts/Install-ContinueConfig.ps1` | Find VS Code + wire Continue → Ollama (Case H); alias `Install-VSCodeConfig.ps1` |
-| `scripts/Install-VSCodeConfig.ps1` | Alias for Install-ContinueConfig.ps1 |
+| `scripts/Install-ContinueConfig.ps1` | Wire Continue → Ollama (ChatGPT-like chat + autocomplete) |
+| `scripts/Install-ClineConfig.ps1` | Wire Cline → Ollama (Cursor-like agent in VS Code) |
+| `scripts/Install-VSCode.ps1` | Check/install VS Code (per-user when possible) |
+| `scripts/Install-VSCodeLocalAI.ps1` | Case H one-shot: VS Code + Continue + Cline + verify |
+| `scripts/Install-VSCodeConfig.ps1` | Alias for Install-VSCodeLocalAI.ps1 |
 | `scripts/Install-Cursor.ps1` | Check Cursor; install per-user if missing (Case I) |
 | `scripts/Install-CursorConfig.ps1` | Find Cursor + wire Models → local Ollama; disable cloud models (`-KeepRemoteModels` to opt out) |
 | `scripts/Download-FromOllama.ps1` | `ollama pull` (+ `hf.co` bridge); skips if already on disk (`-Force` to re-pull) |
@@ -504,4 +532,4 @@ Based on local-llm-chat by Radu Florescu (MIT) — https://github.com/floradu88/
 
 ### Third-party / model licenses (separate)
 
-This repo does **not** redistribute model weights. Respect each model’s own license (Qwen, DeepSeek, Meta Llama/CodeLlama, BigCode StarCoder2, etc.) and the terms of Ollama, VS Code, Cursor, Continue, Headroom, and Codegraph before redistributing those products or weights.
+This repo does **not** redistribute model weights. Respect each model’s own license (Qwen, DeepSeek, Meta Llama/CodeLlama, BigCode StarCoder2, etc.) and the terms of Ollama, VS Code, Cursor, Continue, Cline, Headroom, and Codegraph before redistributing those products or weights.

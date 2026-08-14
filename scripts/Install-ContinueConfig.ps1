@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Find installed VS Code and wire Continue → local Ollama models (Case H).
+  Find installed VS Code and wire Continue → local Ollama models (ChatGPT-like chat + autocomplete).
 
 .DESCRIPTION
   Locates Code.exe / code CLI, optionally installs the Continue extension, and writes
@@ -209,12 +209,17 @@ foreach ($e in $entries) {
   $modelJsonParts += ($e | ConvertTo-Json -Compress -Depth 6)
 }
 $tabJson = $tabAutocomplete | ConvertTo-Json -Compress -Depth 6
-$json = "{`"models`":[`n  " + ($modelJsonParts -join ",`n  ") + "`n],`"tabAutocompleteModel`":" + $tabJson + "`n}"
+$json = "{`"models`":[`n  " + ($modelJsonParts -join ",`n  ") + "`n],`"tabAutocompleteModel`":" + $tabJson + ",`"allowAnonymousTelemetry`":false`n}"
 
 [System.IO.File]::WriteAllText($dest, $json, [System.Text.UTF8Encoding]::new($false))
 
 Write-Section "Done"
-Write-Host "Wrote $dest"
-Write-Host "Reload VS Code, open Continue, and select an Ollama model."
-Write-Host "Verify: ollama list   /   Invoke-RestMethod http://localhost:11434/api/tags"
+Write-Host "Wrote $dest (local models only; allowAnonymousTelemetry=false)"
+Write-Host "Reload VS Code, open Continue (ChatGPT-like chat), and select an Ollama model."
+Write-Host "Tab autocomplete uses: $autoModel"
+Write-Host "Disable remotes (Cursor+VS Code): .\scripts\Disable-RemoteAIProviders.ps1"
+Write-Host "For Cursor-like agent in VS Code: .\scripts\Install-ClineConfig.ps1"
+Write-Host "Full stack + verify: .\scripts\Install-VSCodeLocalAI.ps1"
+Write-Host "Verify Continue: .\scripts\Test-ContinueOllama.ps1"
+Write-Host "Full VS Code check: .\scripts\Test-VSCodeSetup.ps1"
 exit 0

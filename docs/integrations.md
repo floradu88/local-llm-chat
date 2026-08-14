@@ -4,30 +4,77 @@ Assume Ollama is running on `http://localhost:11434` and you have at least one c
 
 If this machine is not set up yet, run `.\scripts\Setup-Machine.ps1` first (see [AGENTS.md](../AGENTS.md) and [agent-setup-playbook.md](agent-setup-playbook.md)). Local agents in this workspace are steered by those files plus `.cursor/rules/local-llm-setup.mdc`.
 
-## VS Code — Continue
+## VS Code Local AI — ChatGPT-like + Cursor-like
 
-Find VS Code and wire Continue from PowerShell (Case H):
+| Goal | Extension | What you get |
+|------|-----------|--------------|
+| ChatGPT-like | **Continue** | Sidebar chat, inline edit, **tab autocomplete** |
+| Cursor-like agent | **Cline** | Multi-file edits, terminal tools, autonomous tasks |
+| Both | `Install-VSCodeLocalAI.ps1` | Install/wire both + `Test-VSCodeSetup.ps1` |
+
+One-shot (Case H):
 
 ```powershell
-.\scripts\Install-ContinueConfig.ps1
-# same script:
+.\scripts\Install-VSCode.ps1              # if Code missing (per-user)
+.\scripts\Install-VSCodeLocalAI.ps1       # Continue + Cline + Test-VSCodeSetup
+.\scripts\Test-VSCodeSetup.ps1            # full config check
+.\scripts\Install-VSCodeLocalAI.ps1 -CheckOnly
+# alias:
 .\scripts\Install-VSCodeConfig.ps1
-.\scripts\Install-ContinueConfig.ps1 -CheckOnly
+# alias for test:
+.\scripts\Test-VSCodeOllama.ps1
 ```
 
-That locates `Code.exe` / `code` CLI, installs the **Continue** extension when possible, and writes `%USERPROFILE%\.continue\config.json` using tags from `ollama list` (or `-Models`). Reload VS Code and select a model.
+`Test-VSCodeSetup.ps1` verifies: VS Code install, Continue + Cline extensions, Ollama reachability, Continue/Cline local-only config (+ optional smoke), VS Code `mcp.json` Codegraph entry, and Copilot/chat local-only settings (warn).
 
-Manual alternative: copy the example and install the extension yourself:
+Checklist: [config/vscode-ollama-local.example.md](../config/vscode-ollama-local.example.md).
+
+### Continue only (chat + autocomplete)
+
+```powershell
+.\scripts\Install-ContinueConfig.ps1 -Force
+.\scripts\Test-ContinueOllama.ps1
+```
+
+Writes `%USERPROFILE%\.continue\config.json` from `ollama list`. Manual copy:
 
 ```powershell
 Copy-Item .\config\continue.config.example.json $HOME\.continue\config.json
-# or:
-.\scripts\Install-ContinueConfig.ps1 -SkipExtension -Force
 ```
 
-Continue talks to Ollama directly at `http://localhost:11434` (no API key required for local). With `-Headroom`, it uses provider `openai` at `http://127.0.0.1:8787/v1` (key `ollama`).
+Continue talks to Ollama at `http://localhost:11434` (no API key). With `-Headroom`, provider `openai` at `http://127.0.0.1:8787/v1` (key `ollama`).
 
-To use **multiple models**: keep several entries in the Continue config and switch in the UI; for parallel/workflow scripts see [multi-model-workflows.md](multi-model-workflows.md).
+### Cline only (agent)
+
+```powershell
+.\scripts\Install-ClineConfig.ps1 -Force
+```
+
+Installs marketplace id `saoudrizwan.claude-dev` and writes the same files as `ollama launch cline`:
+
+- `%USERPROFILE%\.cline\data\settings\providers.json`
+- `%USERPROFILE%\.cline\data\globalState.json`
+
+Reload VS Code → Cline → Provider **Ollama**, Context Window ≥ **32k**.
+
+### Headroom (both)
+
+```powershell
+.\scripts\Start-HeadroomOllama.ps1
+.\scripts\Install-VSCodeLocalAI.ps1 -Headroom -Force
+```
+
+## Local-only (disable remote / cloud providers)
+
+Block OpenAI, Anthropic, Grok, Gemini, Cursor catalog, Copilot, etc.:
+
+```powershell
+# Quit Cursor first, then:
+.\scripts\Disable-RemoteAIProviders.ps1
+.\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
+```
+
+Checklist: [config/local-only-ai.example.md](../config/local-only-ai.example.md). `Setup-Machine.ps1` and `Install-VSCodeLocalAI.ps1` run the VS Code side by default.
 
 ## Cursor — local OpenAI-compatible endpoint
 
@@ -115,30 +162,42 @@ Point any OpenAI-compatible client at `http://127.0.0.1:8787/v1`.
 
 Codegraph builds a **local** structural index (`.codegraph/`) so agents can query call graphs without dumping whole files into the LLM.
 
-### Install (fnm → npm → agent wire → init)
+### Install (fnm preferred → system npm fallback → agent wire → init)
 
 No admin for the default path. Order:
 
-1. **fnm** + Node LTS (per-user)
-2. `npm i -g @colbymchenry/codegraph`
-3. `codegraph install --yes --no-permissions` (MCP wire without agent auto-allow)
-4. `codegraph install --yes` (second pass **with** agent permissions)
-5. `codegraph init` in the target repo if `.codegraph` is missing
+1. **fnm** + Node LTS (per-user) — **preferred**
+2. If fnm fails: fall back to **system** `node`/`npm` only
+3. `npm i -g @colbymchenry/codegraph` (via the preferred runtime)
+4. `codegraph install --yes --no-permissions` (MCP wire without agent auto-allow)
+5. `codegraph install --yes` (second pass **with** agent permissions)
+6. Update **MCP JSON** for Cursor (`~/.cursor/mcp.json`) **and** VS Code (`%APPDATA%\Code\User\mcp.json`) — prefers fnm `aliases\default\node.exe` + Codegraph npm-shim
+7. `codegraph init` in the target repo if `.codegraph` is missing
 
 ```powershell
 .\scripts\Install-Codegraph.ps1
 .\scripts\Install-Codegraph.ps1 -ProjectPath "D:\path\to\your-app"
 .\scripts\Install-Codegraph.ps1 -CheckOnly -ProjectPath "D:\path\to\your-app"
-# Optional UAC for the permissions pass:
-# .\scripts\Install-Codegraph.ps1 -Elevated -ProjectPath "D:\path\to\your-app"
+# Also write portable .cursor/mcp.json + .vscode/mcp.json in the project:
+# .\scripts\Install-Codegraph.ps1 -WriteWorkspaceMcp -ProjectPath "D:\path\to\your-app"
+# Force fnm only (no system fallback):
+# .\scripts\Install-Codegraph.ps1 -RequireFnm
+# System npm only (not recommended):
+# .\scripts\Install-Codegraph.ps1 -SkipFnm
 ```
+
+MCP checklist: [config/codegraph-mcp.example.md](../config/codegraph-mcp.example.md).
 
 `Setup-FullLocalStack.ps1` calls this for `-ProjectPath` (default: this toolkit). Init-only helper: `Initialize-Codegraph.ps1` (auto-runs install if CLI missing).
 
-Manual equivalent:
+Manual equivalent (fnm preferred):
 
 ```powershell
-# fnm + node (if needed), then:
+# preferred:
+winget install Schniz.fnm --scope user
+fnm install lts-latest
+fnm use lts-latest
+# then:
 npm i -g @colbymchenry/codegraph
 codegraph install --yes --target=cursor --no-permissions
 codegraph install --yes --target=cursor
@@ -155,25 +214,29 @@ codegraph init
 
 Keep indexing local-first: do not send the repo to a cloud embed API unless you intentionally choose a cloud provider.
 
-Restart Cursor after `codegraph install` so MCP reloads. Ensure `codegraph init` has been run in the workspace so tools resolve symbols.
+Restart **Cursor** and **VS Code** after `Install-Codegraph.ps1` so MCP reloads from `~/.cursor/mcp.json` and `%APPDATA%\Code\User\mcp.json`. Ensure `codegraph init` has been run in the workspace so tools resolve symbols.
 
 **Faster understanding:** use Codegraph first, then prompts from [code-understanding-prompts.md](code-understanding-prompts.md).
 
 ## Suggested daily loop
 
 1. Ollama tray / `ollama serve` running.
-2. Optional: `.\scripts\Start-HeadroomOllama.ps1`, then `Install-CursorConfig.ps1 -Headroom` and/or `Install-ContinueConfig.ps1 -Headroom -Force`.
-3. VS Code Continue **or** Cursor already wired via `Install-ContinueConfig.ps1` / `Install-CursorConfig.ps1` (or Models UI → Ollama / Headroom).
+2. Optional: `.\scripts\Start-HeadroomOllama.ps1`, then `Install-CursorConfig.ps1 -Headroom` and/or `Install-VSCodeLocalAI.ps1 -Headroom -Force`.
+3. VS Code Local AI **or** Cursor already wired (`Install-VSCodeLocalAI.ps1` / `Install-CursorConfig.ps1`).
 4. Codegraph MCP available after `codegraph init` in the project.
 
 ## Troubleshooting
 
 | Symptom | Check |
 |---------|--------|
-| Continue / Cursor cannot reach model | `Invoke-RestMethod http://localhost:11434/api/tags` |
-| VS Code / Continue not wired | `.\scripts\Install-ContinueConfig.ps1` (alias `Install-VSCodeConfig.ps1`) |
+| Continue / Cline / Cursor cannot reach model | `Invoke-RestMethod http://localhost:11434/api/tags` |
+| VS Code Local AI incomplete | `.\scripts\Install-VSCodeLocalAI.ps1 -Force` then `.\scripts\Test-VSCodeSetup.ps1` |
+| Continue only | `.\scripts\Install-ContinueConfig.ps1 -Force` |
+| Cline only | `.\scripts\Install-ClineConfig.ps1 -Force` |
+| VS Code missing | `.\scripts\Install-VSCode.ps1` |
 | Cursor not installed | `.\scripts\Install-Cursor.ps1` |
 | Cursor Models not wired | Quit Cursor; `.\scripts\Install-CursorConfig.ps1` then `.\scripts\Test-CursorOllama.ps1` |
+| Remote/cloud models still available | `.\scripts\Disable-RemoteAIProviders.ps1` (quit Cursor first) |
 | Wrong model name | Must match `ollama list` exactly |
 | Pull downloaded again | Scripts skip by default; unexpected re-pull → check tag / use manifests; intentional refresh → `-Force` |
 | Headroom 502 / empty | Ollama up; URL ends with `/v1` for OpenAI path |
@@ -181,3 +244,4 @@ Restart Cursor after `codegraph install` so MCP reloads. Ensure `codegraph init`
 | GPU unused / VM | `.\scripts\Test-GpuSupport.ps1` and `.\scripts\Install-GpuDrivers.ps1` |
 | Codegraph empty / CLI missing | `.\scripts\Install-Codegraph.ps1 -ProjectPath <repo>` |
 | Codegraph empty | Run `codegraph init` in the project root (or Install-Codegraph.ps1) |
+| Cline weak agent results | Larger coding model; Context Window ≥ 32k; enable Compact Prompt in Cline |

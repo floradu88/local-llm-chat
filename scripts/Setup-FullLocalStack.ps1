@@ -101,11 +101,11 @@ if ($PullExampleModels -and -not $SkipPull) {
   }
 }
 
-# --- 2) Continue ---
+# --- 2) VS Code Local AI ---
 Write-Host ""
 if (-not $SkipContinue) {
-  Write-Host "[2/5] Install-ContinueConfig.ps1"
-  & (Join-Path $Scripts "Install-ContinueConfig.ps1") -Force
+  Write-Host "[2/5] Install-VSCodeLocalAI.ps1 (Continue + Cline)"
+  & (Join-Path $Scripts "Install-VSCodeLocalAI.ps1") -Force -SkipTest
 } else {
   Write-Host "[2/5] SkipContinue"
 }
@@ -113,7 +113,7 @@ if (-not $SkipContinue) {
 # --- 3) Codegraph install + index ---
 Write-Host ""
 if (-not $SkipCodegraph) {
-  Write-Host "[3/5] Install-Codegraph.ps1 (fnm → npm → agent install → init): $ProjectPath"
+  Write-Host "[3/5] Install-Codegraph.ps1 (fnm preferred; system npm fallback): $ProjectPath"
   & (Join-Path $Scripts "Install-Codegraph.ps1") -ProjectPath $ProjectPath
 } else {
   Write-Host "[3/5] SkipCodegraph"
@@ -135,9 +135,9 @@ if (-not $SkipVerify) {
 
 Write-Host ""
 Write-Host "=== Editors → Ollama ==="
-Write-Host "  VS Code: .\scripts\Install-ContinueConfig.ps1   (alias: Install-VSCodeConfig.ps1)"
+Write-Host "  VS Code: .\scripts\Install-VSCodeLocalAI.ps1   then .\scripts\Test-VSCodeSetup.ps1"
 Write-Host "  Cursor:  .\scripts\Install-CursorConfig.ps1     (quit Cursor first)"
-Write-Host "  Headroom: .\scripts\Start-HeadroomOllama.ps1 then either script with -Headroom"
+Write-Host "  Headroom: .\scripts\Start-HeadroomOllama.ps1 then either path with -Headroom"
 Write-Host ""
 Write-Host "=== Next ==="
 Write-Host "  GPU check:     .\scripts\Test-GpuSupport.ps1"

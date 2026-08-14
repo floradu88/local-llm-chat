@@ -5,7 +5,7 @@ alwaysApply: true
 
 # local-llm-chat project rule
 
-This repository configures **local Ollama coding models** and integrations (VS Code Continue, Cursor, Codegraph, Headroom) on Windows without admin when possible.
+This repository configures **local Ollama coding models** and integrations (VS Code Local AI: Continue + Cline, Cursor, Codegraph, Headroom) on Windows without admin when possible.
 
 ## Required reading for setup tasks
 
@@ -26,14 +26,18 @@ Use `-Tier 8GB`, `16GB`, or `32GB` from the user's RAM. Prefer scripts in `scrip
 `Setup-Machine.ps1` also wires editors when possible:
 
 - Cursor install + Models → Ollama (`Install-Cursor.ps1` / `Install-CursorConfig.ps1`)
-- VS Code Continue → Ollama (`Install-ContinueConfig.ps1` / alias `Install-VSCodeConfig.ps1`)
+- VS Code Local AI → Ollama (`Install-VSCodeLocalAI.ps1` / alias `Install-VSCodeConfig.ps1` — Continue chat + Cline agent)
 
 Notable helpers:
 
 - `Install-Cursor.ps1` — check / per-user install (unless `-SkipCursor`)
 - `Install-CursorConfig.ps1` — find Cursor + write Models → Ollama into `state.vscdb`, disable cloud/catalog models (**quit Cursor first**; `-KeepRemoteModels` to keep remotes; unless `-SkipCursorConfig`)
-- `Install-ContinueConfig.ps1` / `Install-VSCodeConfig.ps1` — find VS Code (`Code.exe`), install Continue extension, write `~\.continue\config.json` (unless `-SkipContinueConfig`)
-- `Install-Codegraph.ps1` — fnm + Node (no admin) → npm Codegraph → `--no-permissions` then permissions → `codegraph init` if needed
+- `Install-VSCode.ps1` — check / per-user install VS Code
+- `Install-VSCodeLocalAI.ps1` — Continue (ChatGPT-like) + Cline (Cursor-like agent) + `Test-VSCodeSetup.ps1`
+- `Test-VSCodeSetup.ps1` — full Case H check (extensions, Continue, Cline, MCP, local-only); alias `Test-VSCodeOllama.ps1`
+- `Disable-RemoteAIProviders.ps1` — block OpenAI/Cursor/Grok/Copilot/etc. for Cursor + VS Code (+ Ollama cloud)
+- `Install-ContinueConfig.ps1` / `Install-ClineConfig.ps1` — pieces of Case H
+- `Install-Codegraph.ps1` — **fnm preferred** → npm Codegraph → agent install → **Cursor + VS Code mcp.json** → `codegraph init`; system npm only if fnm fails (`-RequireFnm` / `-SkipFnm` / `-WriteWorkspaceMcp`)
 - `Install-GpuDrivers.ps1` / `Test-GpuSupport.ps1` — GPU + VM guidance
 - Pull/download scripts skip models already on disk unless `-Force` (or `Update-CodingModels.ps1`)
 
@@ -42,4 +46,4 @@ Notable helpers:
 - Do not commit `.gguf`, `models/**` blobs, or API/HF tokens.
 - Only download models from sources in `docs/trusted-sources.md`.
 - Ollama is the primary runtime; do not switch the stack to LM Studio unless asked.
-- After setup, verify `ollama list` and `http://localhost:11434/api/tags`. Confirm editor rows in `Show-SetupStatus.ps1` (H/H-cfg, I/I-cfg). Run `.\scripts\Test-CursorOllama.ps1` for Cursor config + chat smoke. Re-run `Install-ContinueConfig.ps1` or `Install-CursorConfig.ps1` if needed (see `docs/integrations.md`).
+- After setup, verify `ollama list` and `http://localhost:11434/api/tags`. Confirm editor rows in `Show-SetupStatus.ps1` (H/H-cfg/H-agent, I/I-cfg, L-vscode). Run `Test-VSCodeSetup.ps1` / `Test-CursorOllama.ps1`. Re-run `Install-VSCodeLocalAI.ps1` or `Install-CursorConfig.ps1` if needed (see `docs/integrations.md`).
