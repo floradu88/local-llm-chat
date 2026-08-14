@@ -52,6 +52,11 @@
 
 .PARAMETER SkipVSCodeInstall
   Do not auto-install VS Code when missing during Local AI setup.
+
+.PARAMETER AirGap
+  Offline-friendly mode: do not download Ollama/Cursor/VS Code installers, model pulls,
+  or GPU drivers. Requires ollama already on PATH with models present. Still wires
+  editor configs when apps exist and forces Disable-RemoteAIProviders.
 #>
 [CmdletBinding()]
 param(
@@ -70,7 +75,8 @@ param(
   [switch] $SkipContinueConfig,
   [switch] $ForceContinueConfig,
   [switch] $SkipClineConfig,
-  [switch] $SkipVSCodeInstall
+  [switch] $SkipVSCodeInstall,
+  [switch] $AirGap
 )
 
 $ErrorActionPreference = "Stop"
@@ -80,10 +86,23 @@ $RepoRoot = Split-Path -Parent $Scripts
 
 $Tier = Resolve-CodingModelTier -Tier $Tier
 
+if ($AirGap) {
+  Write-Host "AirGap enabled: skipping installer downloads, model pulls, GPU drivers, Headroom hint."
+  Write-Host "  Requires existing Ollama + models. Editor marketplace extension installs may still need network."
+  $SkipInstall = $true
+  $SkipPull = $true
+  $SkipCursor = $true
+  $SkipVSCodeInstall = $true
+  $InstallGpuDrivers = $false
+  $SkipHeadroomHint = $true
+  $ForceCursor = $false
+}
+
 Set-Location $RepoRoot
 Write-Host "=== local-llm-chat machine setup ==="
 Write-Host "Repo: $RepoRoot"
 Write-Host "Tier: $Tier"
+if ($AirGap) { Write-Host "Mode: AirGap" }
 Write-Host ""
 
 # 1) Env

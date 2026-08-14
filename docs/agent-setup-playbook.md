@@ -47,6 +47,7 @@ Flags:
 | `-ForceContinueConfig` | Pass `-Force` (overwrite Continue/Cline configs) |
 | `-SkipClineConfig` | Continue only (skip Cline agent) |
 | `-SkipVSCodeInstall` | Do not auto-install VS Code when missing |
+| `-AirGap` | Offline-friendly: no Ollama/Cursor/VS Code/GPU downloads or model pulls; require existing Ollama; still wire configs + Disable-RemoteAIProviders |
 
 What `Setup-Machine.ps1` does:
 

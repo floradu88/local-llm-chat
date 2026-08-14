@@ -37,6 +37,10 @@
 
 .PARAMETER ModelsRoot
   Optional OLLAMA_MODELS override.
+
+.PARAMETER AirGap
+  Offline-friendly: pass through to Setup-Machine; skip Codegraph npm/fnm install and
+  example model pulls. Requires Ollama + models already present.
 #>
 [CmdletBinding()]
 param(
@@ -55,7 +59,8 @@ param(
   [switch] $ForceCursor,
   [switch] $SkipCursorConfig,
   [switch] $ForceCursorConfig,
-  [string] $ModelsRoot = ""
+  [string] $ModelsRoot = "",
+  [switch] $AirGap
 )
 
 $ErrorActionPreference = "Stop"
@@ -73,6 +78,16 @@ Write-Host "=== Setup-FullLocalStack ==="
 Write-Host "Repo toolkit: $RepoRoot"
 Write-Host "Index project: $ProjectPath"
 Write-Host "Tier: $Tier"
+if ($AirGap) {
+  Write-Host "Mode: AirGap (no downloads / no Codegraph npm install)"
+  $SkipInstall = $true
+  $SkipPull = $true
+  $SkipCodegraph = $true
+  $SkipCursor = $true
+  $InstallGpuDrivers = $false
+  $PullExampleModels = $false
+  $ForceCursor = $false
+}
 Write-Host ""
 
 # --- 1) Ollama + models ---
@@ -81,6 +96,7 @@ $setupArgs = @{
   Tier              = $Tier
   SkipHeadroomHint  = $true
 }
+if ($AirGap) { $setupArgs["AirGap"] = $true }
 if ($SkipInstall) { $setupArgs["SkipInstall"] = $true }
 if ($SkipPull) { $setupArgs["SkipPull"] = $true }
 if ($ModelsRoot) { $setupArgs["ModelsRoot"] = $ModelsRoot }

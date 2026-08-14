@@ -101,6 +101,20 @@ Or pull only:
 
 ---
 
+### Case B2 — Air-gap / offline re-wire (no downloads)
+
+When Ollama and models already exist and you must not download installers or pulls:
+
+```powershell
+.\scripts\Setup-Machine.ps1 -AirGap
+# or full stack without npm/Codegraph download:
+.\scripts\Setup-FullLocalStack.ps1 -AirGap
+```
+
+Still points editors at local Ollama and runs `Disable-RemoteAIProviders`. Marketplace extension installs may need network if Continue/Cline are missing.
+
+---
+
 ### Case C — Step by step (no one-shot script)
 
 ```powershell
