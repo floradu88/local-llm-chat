@@ -71,6 +71,7 @@ What `Setup-Machine.ps1` does:
 .\scripts\Install-CursorConfig.ps1 -CheckOnly
 .\scripts\Test-CursorOllama.ps1
 .\scripts\Test-VSCodeSetup.ps1
+.\scripts\Test-ClineSetup.ps1
 .\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
 ```
 

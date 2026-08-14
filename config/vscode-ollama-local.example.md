@@ -33,12 +33,15 @@ Writes `%USERPROFILE%\.continue\config.json` with models from `ollama list`.
 
 ```powershell
 .\scripts\Install-ClineConfig.ps1 -Force
+.\scripts\Test-ClineSetup.ps1
 ```
 
 Writes (same layout as `ollama launch cline`):
 
 - `%USERPROFILE%\.cline\data\settings\providers.json`
 - `%USERPROFILE%\.cline\data\globalState.json`
+
+`Test-ClineSetup.ps1` confirms both files, act/plan modes, model/base consistency, local-only, and smokes `/v1/chat/completions`.
 
 Reload VS Code → open Cline → Provider **Ollama**, Context Window ≥ 32k.
 

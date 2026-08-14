@@ -21,6 +21,7 @@ Legend: `[x]` done in repo · `[ ]` not done / out of scope · `(machine)` must 
 - [x] Coding Modelfile helper (`New-CoderModelfile.ps1`)
 - [x] Continue / VS Code chat config (`Install-ContinueConfig.ps1`) — finds Code.exe, installs Continue, writes models from `ollama list`
 - [x] Cline / VS Code agent config (`Install-ClineConfig.ps1`) — Cursor-like agent → Ollama (`~/.cline` providers + globalState)
+- [x] Cline full setup test (`Test-ClineSetup.ps1`) — providers + globalState consistency + local-only + smoke
 - [x] VS Code Local AI one-shot (`Install-VSCodeLocalAI.ps1` / `Install-VSCodeConfig.ps1`) — Continue + Cline + verify
 - [x] VS Code install helper (`Install-VSCode.ps1`)
 - [x] VS Code Local AI full setup test (`Test-VSCodeSetup.ps1`; alias `Test-VSCodeOllama.ps1`)
@@ -96,6 +97,7 @@ Mark these on each machine after you run setup:
 .\scripts\Test-CursorOllama.ps1
 .\scripts\Test-VSCodeSetup.ps1
 # alias: .\scripts\Test-VSCodeOllama.ps1
+.\scripts\Test-ClineSetup.ps1
 .\scripts\Disable-RemoteAIProviders.ps1 -CheckOnly
 .\scripts\Install-Codegraph.ps1 -CheckOnly
 .\scripts\Install-Headroom.ps1 -CheckOnly

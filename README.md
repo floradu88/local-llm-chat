@@ -277,6 +277,7 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 .\scripts\Show-SetupStatus.ps1
 .\scripts\Install-ContinueConfig.ps1 -CheckOnly
 .\scripts\Install-ClineConfig.ps1 -CheckOnly
+.\scripts\Test-ClineSetup.ps1                # Cline fully on local Ollama (config + smoke)
 .\scripts\Test-VSCodeSetup.ps1
 # alias: .\scripts\Test-VSCodeOllama.ps1
 .\scripts\Install-Headroom.ps1 -CheckOnly
@@ -293,6 +294,7 @@ Structural MCP tools use the local graph. Pull embeddings only if your Codegraph
 | Script won’t run | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
 | Pull too large / OOM | Re-run with `-Tier 8GB` or Case E |
 | Execution / SmartScreen blocks installer | Allow `OllamaSetup.exe` or ask IT to whitelist |
+| H-agent / H-agent-test red (Cline) | `.\scripts\Install-ClineConfig.ps1 -Force` then `.\scripts\Test-ClineSetup.ps1` |
 | H / H-cfg / H-agent red | `.\scripts\Install-VSCodeLocalAI.ps1 -Force` then `.\scripts\Test-VSCodeSetup.ps1` |
 | L-vscode red | `.\scripts\Test-VSCodeSetup.ps1` (script missing) or re-run LocalAI |
 | Remote models still on | Quit Cursor; `.\scripts\Disable-RemoteAIProviders.ps1` |
@@ -494,7 +496,8 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | `scripts/Test-LocalSetup.ps1` | Verify PATH, API, models (Case L) |
 | `scripts/Test-CursorOllama.ps1` | Verify Cursor Models config + OpenAI `/v1/chat/completions` smoke |
 | `scripts/Test-ContinueOllama.ps1` | Verify Continue chat config + Ollama smoke |
-| `scripts/Test-VSCodeSetup.ps1` | Full VS Code Case H check (extensions, Continue, Cline, MCP, local-only) |
+| `scripts/Test-ClineSetup.ps1` | Verify Cline fully uses repo local setup (providers + globalState + smoke) |
+| `scripts/Test-VSCodeSetup.ps1` | Full VS Code Case H check (extensions, Continue, Cline via Test-ClineSetup, MCP, local-only) |
 | `scripts/Test-VSCodeOllama.ps1` | Alias for Test-VSCodeSetup.ps1 |
 | `scripts/Disable-RemoteAIProviders.ps1` | Disable remote/cloud providers for Cursor + VS Code (+ Ollama cloud) |
 | `scripts/Update-CodingModels.ps1` | Force re-pull / refresh tier models |

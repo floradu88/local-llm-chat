@@ -35,6 +35,7 @@ What it does:
 ```powershell
 .\scripts\Test-CursorOllama.ps1      # fails if Cursor remotes still on
 .\scripts\Test-VSCodeSetup.ps1      # fails if Continue/Cline still have remotes
+.\scripts\Test-ClineSetup.ps1       # Cline providers + globalState + smoke
 # alias: .\scripts\Test-VSCodeOllama.ps1
 .\scripts\Show-SetupStatus.ps1
 ```

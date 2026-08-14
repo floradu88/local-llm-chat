@@ -70,7 +70,7 @@ Write-Host ("  Source:     {0}" -f $(if ($status.Source) { $status.Source } else
 if ($CheckOnly) {
   if ($status.Configured) {
     Write-Host "  CheckOnly: Cline looks wired to local Ollama"
-    Write-Host "  Deeper check: .\scripts\Test-VSCodeSetup.ps1"
+    Write-Host "  Deeper check: .\scripts\Test-ClineSetup.ps1"
     exit 0
   }
   Write-Host "  CheckOnly: not configured - re-run without -CheckOnly"
@@ -182,5 +182,6 @@ Write-Host "Wrote providers.json + globalState.json for Ollama."
 Write-Host "Reload VS Code, open Cline, confirm Provider=Ollama and model=$modelTag."
 Write-Host "Tip: set Context Window >= 32k in Cline settings for agent work."
 Write-Host "Disable remotes (Cursor+VS Code): .\scripts\Disable-RemoteAIProviders.ps1"
-Write-Host "Verify: .\scripts\Test-VSCodeSetup.ps1"
+Write-Host "Verify: .\scripts\Test-ClineSetup.ps1"
+Write-Host "Full VS Code: .\scripts\Test-VSCodeSetup.ps1"
 exit 0

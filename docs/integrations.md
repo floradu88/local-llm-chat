@@ -48,6 +48,7 @@ Continue talks to Ollama at `http://localhost:11434` (no API key). With `-Headro
 
 ```powershell
 .\scripts\Install-ClineConfig.ps1 -Force
+.\scripts\Test-ClineSetup.ps1
 ```
 
 Installs marketplace id `saoudrizwan.claude-dev` and writes the same files as `ollama launch cline`:

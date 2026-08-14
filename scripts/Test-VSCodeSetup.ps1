@@ -8,7 +8,7 @@
     1. VS Code installed (Code.exe / code CLI)
     2. Extensions: Continue + Cline
     3. Continue -> Ollama (config, local-only, optional smoke)
-    4. Cline -> Ollama (config, local-only, optional smoke)
+    4. Cline -> Ollama via Test-ClineSetup.ps1 (providers + globalState + smoke)
     5. VS Code User mcp.json has Codegraph (fnm-friendly launch)
     6. Editor settings disable Copilot / built-in chat AI (warn if missing)
     7. Ollama API reachable
@@ -193,64 +193,17 @@ if (-not $SkipContinue) {
   }
 }
 
-# 5) Cline
+# 5) Cline — full repo wiring check
 if (-not $SkipCline) {
   Write-Host ""
   Write-Host "--- Cline (Cursor-like agent) ---"
-  $cline = Get-ClineOllamaConfigStatus
-  if ($cline.Configured) {
-    Write-Check "OK" ("Cline model: {0}" -f $cline.Model)
-    Write-Check "OK" ("Cline base:  {0} ({1})" -f $cline.BaseUrl, $cline.Source)
-    if ($cline.LocalOnly) {
-      Write-Check "OK" "Cline local-only (no cloud providers)"
-    } elseif ($AllowRemoteModels) {
-      Write-Check "WARN" ("Cline remotes still on: {0}" -f ($cline.RemoteProviders -join ", "))
-      $warnings++
-    } else {
-      Write-Check "FAIL" ("Cline still has remote providers: {0}" -f ($cline.RemoteProviders -join ", "))
-      Write-Host "     Fix: .\scripts\Disable-RemoteAIProviders.ps1 -SkipCursor"
-      $failed++
-    }
-    if ($ollamaNames.Count -gt 0 -and $ollamaNames -notcontains $cline.Model) {
-      Write-Check "FAIL" ("Cline model '{0}' not in ollama list" -f $cline.Model)
-      $failed++
-    } else {
-      Write-Check "OK" "Cline model present in ollama list"
-    }
-  } else {
-    Write-Check "FAIL" "Cline not wired - .\scripts\Install-ClineConfig.ps1"
+  $clineArgs = @{ TimeoutSec = $TimeoutSec }
+  if ($Model) { $clineArgs["Model"] = $Model }
+  if ($SkipSmoke) { $clineArgs["SkipSmoke"] = $true }
+  if ($AllowRemoteModels) { $clineArgs["AllowRemoteModels"] = $true }
+  & (Join-Path $PSScriptRoot "Test-ClineSetup.ps1") @clineArgs
+  if ($LASTEXITCODE -ne 0) {
     $failed++
-  }
-
-  if (-not $SkipSmoke -and $cline.Configured) {
-    $smokeModel = if ($Model) { $Model } elseif ($cline.Model) { $cline.Model } elseif ($ollamaNames.Count -gt 0) { $ollamaNames[0] } else { "" }
-    if (-not $smokeModel) {
-      Write-Check "FAIL" "No model for Cline smoke"
-      $failed++
-    } else {
-      $root = if ($cline.BaseUrl) { $cline.BaseUrl.TrimEnd("/") -replace "/v1$", "" } else { "http://127.0.0.1:11434" }
-      $uri = "$root/v1/chat/completions"
-      Write-Host ("Smoke (Cline path): POST {0} model={1}" -f $uri, $smokeModel)
-      try {
-        $body = @{
-          model      = $smokeModel
-          messages   = @(@{ role = "user"; content = "Reply with exactly: ok" })
-          max_tokens = 8
-          stream     = $false
-        } | ConvertTo-Json -Depth 5 -Compress
-        $resp = Invoke-RestMethod -Method Post -Uri $uri -Body $body -ContentType "application/json" -Headers @{ Authorization = "Bearer ollama" } -TimeoutSec $TimeoutSec
-        $snippet = (($resp.choices[0].message.content -replace "\s+", " ").Trim())
-        if (-not $snippet) { $snippet = "(empty)" }
-        if ($snippet.Length -gt 80) { $snippet = $snippet.Substring(0, 80) + "..." }
-        Write-Check "OK" ("chat/completions: {0}" -f $snippet)
-      } catch {
-        Write-Check "FAIL" ("Cline path smoke failed: {0}" -f $_)
-        if ($root -match "8787") {
-          Write-Host "     Tip: .\scripts\Install-Headroom.ps1 then .\scripts\Start-HeadroomOllama.ps1"
-        }
-        $failed++
-      }
-    }
   }
 }
 

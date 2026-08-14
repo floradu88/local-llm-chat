@@ -84,7 +84,14 @@ if ($cline.Configured) {
   $loc = if ($cline.LocalOnly) { "local-only" } else { "HAS REMOTE - Disable-RemoteAIProviders.ps1" }
   Write-Check "H-agent" "OK" ("Cline (agent) -> {0} ({1}; {2})" -f $cline.Model, $cline.BaseUrl, $loc)
 } else {
-  Write-Check "H-agent" "WARN" "run .\scripts\Install-ClineConfig.ps1 or .\scripts\Install-VSCodeLocalAI.ps1; verify .\scripts\Test-VSCodeSetup.ps1"
+  Write-Check "H-agent" "WARN" "run .\scripts\Install-ClineConfig.ps1 or .\scripts\Install-VSCodeLocalAI.ps1; verify .\scripts\Test-ClineSetup.ps1"
+}
+
+$clineTest = Join-Path $PSScriptRoot "Test-ClineSetup.ps1"
+if (Test-Path -LiteralPath $clineTest) {
+  Write-Check "H-agent-test" "OK" "Test-ClineSetup.ps1 available (full Cline local wiring check)"
+} else {
+  Write-Check "H-agent-test" "FAIL" "Test-ClineSetup.ps1 missing"
 }
 
 # I Cursor
