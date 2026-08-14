@@ -187,13 +187,13 @@ flowchart TB
 
 ## 6. Recommended hardening backlog (priority)
 
-1. **P0 — Document operator threat model** (this file) and link from README (done here).
-2. **P1 — Hash-verify installers**; stop raw `irm | iex` where practical.
-3. **P1 — Allowlist + checksum** on `Download-FromUrl.ps1`.
-4. **P2 — Constrain `Invoke-Elevated.ps1`** to `scripts\*.ps1` under the repo root.
-5. **P2 — Optional “air-gap” switch** on setup: skip URL pulls, skip pip/npm, require existing Ollama, force `Disable-RemoteAIProviders`.
-6. **P3 — Egress guidance** (firewall / proxy) for regulated environments.
-7. **P3 — Dependabot/renovate or lockfiles** for any future pinned Node/Python tooling checked into the repo.
+1. **P0 — Document operator threat model** (this file) and link from README — **done**.
+2. **P1 — Hash-verify installers**; stop raw `irm | iex` where practical — **done** (`Save-RemoteFile` / `Invoke-VerifiedRemoteScript`; `Install-Ollama.ps1` downloads then `-File`; Cursor/VS Code/fnm use allowlist + SHA print/optional pin via `config/installer-pins.example.json`).
+3. **P1 — Allowlist + checksum** on `Download-FromUrl.ps1` — pending.
+4. **P2 — Constrain `Invoke-Elevated.ps1`** to `scripts\*.ps1` under the repo root — pending.
+5. **P2 — Optional “air-gap” switch** on setup — pending.
+6. **P3 — Egress guidance** (firewall / proxy) for regulated environments — pending.
+7. **P3 — Dependabot/renovate or lockfiles** — pending.
 
 ---
 

@@ -1,0 +1,27 @@
+# Optional SHA256 pins for installer/bootstrap artifacts.
+# Copy to installer-pins.json (gitignored if you put secrets elsewhere — this file is an example).
+# When present as config/installer-pins.json, install scripts verify downloads fail-closed.
+#
+# Obtain a pin after a known-good download:
+#   Get-FileHash -Algorithm SHA256 path\to\file
+#
+# Keys used by scripts:
+#   ollama-install-ps1  — https://ollama.com/install.ps1
+#   cursor-user-setup   — Cursor user-setup EXE (update when version changes)
+#   vscode-user-setup   — VS Code User Installer EXE (update when version changes)
+
+{
+  "ollama-install-ps1": {
+    "url": "https://ollama.com/install.ps1",
+    "sha256": "",
+    "note": "Fill sha256 after reviewing a known-good install.ps1; leave empty to print-only verify."
+  },
+  "cursor-user-setup": {
+    "sha256": "",
+    "note": "Optional; Install-Cursor.ps1 accepts -ExpectedSha256 or this pin."
+  },
+  "vscode-user-setup": {
+    "sha256": "",
+    "note": "Optional; Install-VSCode.ps1 accepts -ExpectedSha256 or this pin."
+  }
+}

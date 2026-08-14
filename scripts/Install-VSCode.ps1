@@ -16,12 +16,16 @@
 
 .PARAMETER SkipWinget
   Skip winget and download the official user installer directly.
+
+.PARAMETER ExpectedSha256
+  Optional SHA256 of the User Installer EXE. Also reads config/installer-pins.json (vscode-user-setup).
 #>
 [CmdletBinding()]
 param(
   [switch] $CheckOnly,
   [switch] $Force,
-  [switch] $SkipWinget
+  [switch] $SkipWinget,
+  [string] $ExpectedSha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -97,11 +101,20 @@ if (-not $SkipWinget) {
 }
 
 if (-not $installed) {
+  if (-not $ExpectedSha256) {
+    $ExpectedSha256 = Get-InstallerPinSha256 -Id "vscode-user-setup"
+  }
   $tmp = Join-Path $env:TEMP ("VSCodeUserSetup-{0}.exe" -f [guid]::NewGuid().ToString("n"))
   $url = "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user"
   Write-Host "  Downloading VS Code User Installer..."
   Write-Host "  $url"
-  Invoke-WebRequest -Uri $url -OutFile $tmp -UseBasicParsing
+  [void](Save-RemoteFile -Url $url -Destination $tmp -ExpectedSha256 $ExpectedSha256 `
+      -AllowedHosts @(
+        "code.visualstudio.com",
+        "update.code.visualstudio.com",
+        "az764295.vo.msecnd.net",
+        "vscode.download.prss.microsoft.com"
+      ))
   Write-Host "  Running silent user install..."
   $p = Start-Process -FilePath $tmp -ArgumentList "/VERYSILENT","/NORESTART","/MERGETASKS=!runcode,addcontextmenufiles,addcontextmenufolders,associatewithfiles,addtopath" -Wait -PassThru
   if ($p.ExitCode -ne 0 -and $p.ExitCode -ne $null) {

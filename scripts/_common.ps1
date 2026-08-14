@@ -150,6 +150,200 @@ function Test-LocalFilePresent {
   }
 }
 
+# --- Download integrity / host allowlists (infosec P1) ---
+
+function Get-DefaultTrustedDownloadHosts {
+  @(
+    "ollama.com",
+    "www.ollama.com",
+    "github.com",
+    "api.github.com",
+    "objects.githubusercontent.com",
+    "release-assets.githubusercontent.com",
+    "github-releases.githubusercontent.com",
+    "huggingface.co",
+    "cdn-lfs.huggingface.co",
+    "cdn-lfs-us-1.huggingface.co",
+    "modelscope.cn",
+    "www.modelscope.cn",
+    "cursor.com",
+    "www.cursor.com",
+    "code.visualstudio.com",
+    "update.code.visualstudio.com",
+    "az764295.vo.msecnd.net",
+    "vscode.download.prss.microsoft.com",
+    "www.nvidia.com",
+    "us.download.nvidia.com",
+    "international.download.nvidia.com",
+    "gfwsl.geforce.com"
+  )
+}
+
+function Test-UrlHostAllowlisted {
+  param(
+    [Parameter(Mandatory = $true)][string] $Url,
+    [string[]] $AllowedHosts = @(),
+    [switch] $AllowHttp
+  )
+  if (-not $AllowedHosts -or $AllowedHosts.Count -eq 0) {
+    $AllowedHosts = Get-DefaultTrustedDownloadHosts
+  }
+  try {
+    $u = [Uri]$Url
+  } catch {
+    return $false
+  }
+  if (-not $AllowHttp -and $u.Scheme -ne "https") {
+    return $false
+  }
+  $hostName = $u.Host.ToLowerInvariant()
+  foreach ($h in $AllowedHosts) {
+    $want = $h.ToLowerInvariant().Trim()
+    if (-not $want) { continue }
+    if ($hostName -eq $want -or $hostName.EndsWith("." + $want)) {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Assert-UrlHostAllowlisted {
+  param(
+    [Parameter(Mandatory = $true)][string] $Url,
+    [string[]] $AllowedHosts = @(),
+    [switch] $AllowHttp
+  )
+  if (-not (Test-UrlHostAllowlisted -Url $Url -AllowedHosts $AllowedHosts -AllowHttp:$AllowHttp)) {
+    $hosts = if ($AllowedHosts -and $AllowedHosts.Count) { $AllowedHosts -join ", " } else { (Get-DefaultTrustedDownloadHosts) -join ", " }
+    throw ("URL host not allowlisted (or not HTTPS): {0}`nAllowed hosts: {1}`nSee docs/trusted-sources.md / docs/infosec-swot.md" -f $Url, $hosts)
+  }
+}
+
+function Get-FileSha256Hex {
+  param([Parameter(Mandatory = $true)][string] $Path)
+  $hash = Get-FileHash -LiteralPath $Path -Algorithm SHA256
+  return $hash.Hash.ToLowerInvariant()
+}
+
+function Assert-FileSha256 {
+  param(
+    [Parameter(Mandatory = $true)][string] $Path,
+    [Parameter(Mandatory = $true)][string] $ExpectedSha256
+  )
+  $want = ($ExpectedSha256 -replace "\s", "").ToLowerInvariant()
+  if ($want -notmatch '^[a-f0-9]{64}$') {
+    throw ("ExpectedSha256 must be 64 hex chars, got: {0}" -f $ExpectedSha256)
+  }
+  $got = Get-FileSha256Hex -Path $Path
+  if ($got -ne $want) {
+    throw ("SHA256 mismatch for {0}`n  expected: {1}`n  actual:   {2}" -f $Path, $want, $got)
+  }
+  return $got
+}
+
+function Get-InstallerPinSha256 {
+  param(
+    [Parameter(Mandatory = $true)][string] $Id,
+    [string] $PinsPath = ""
+  )
+  if (-not $PinsPath) {
+    $PinsPath = Join-Path (Get-RepoRoot) "config\installer-pins.json"
+  }
+  if (-not (Test-Path -LiteralPath $PinsPath)) {
+    return $null
+  }
+  try {
+    $pins = Get-Content -LiteralPath $PinsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $entry = $pins.$Id
+    if ($null -eq $entry) { return $null }
+    if ($entry -is [string]) {
+      if ([string]::IsNullOrWhiteSpace($entry)) { return $null }
+      return $entry
+    }
+    if ($entry.sha256) {
+      $s = [string]$entry.sha256
+      if ([string]::IsNullOrWhiteSpace($s)) { return $null }
+      return $s
+    }
+  } catch {
+    Write-Warning ("Could not read installer pins from {0}: {1}" -f $PinsPath, $_)
+  }
+  return $null
+}
+
+function Save-RemoteFile {
+  <#
+  .SYNOPSIS
+    Download a URL to disk with HTTPS host allowlist and optional SHA256 verify.
+  #>
+  param(
+    [Parameter(Mandatory = $true)][string] $Url,
+    [Parameter(Mandatory = $true)][string] $Destination,
+    [string[]] $AllowedHosts = @(),
+    [string] $ExpectedSha256 = "",
+    [switch] $SkipAllowlist
+  )
+  if (-not $SkipAllowlist) {
+    Assert-UrlHostAllowlisted -Url $Url -AllowedHosts $AllowedHosts
+  }
+  $dir = Split-Path -Parent $Destination
+  if ($dir -and -not (Test-Path -LiteralPath $dir)) {
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  }
+  $usedBits = $false
+  try {
+    if (Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue) {
+      Start-BitsTransfer -Source $Url -Destination $Destination -ErrorAction Stop
+      $usedBits = $true
+    }
+  } catch {
+    Write-Warning ("BITS transfer failed; falling back to Invoke-WebRequest. {0}" -f $_)
+  }
+  if (-not $usedBits) {
+    Invoke-WebRequest -Uri $Url -OutFile $Destination -UseBasicParsing
+  }
+  if (-not (Test-Path -LiteralPath $Destination)) {
+    throw ("Download missing: {0}" -f $Destination)
+  }
+  $sha = Get-FileSha256Hex -Path $Destination
+  Write-Host ("  SHA256: {0}" -f $sha)
+  if ($ExpectedSha256) {
+    Assert-FileSha256 -Path $Destination -ExpectedSha256 $ExpectedSha256 | Out-Null
+    Write-Host "  SHA256 verified."
+  }
+  return $sha
+}
+
+function Invoke-VerifiedRemoteScript {
+  <#
+  .SYNOPSIS
+    Download a remote .ps1 to disk (allowlisted), optionally verify SHA256, then run with -File (no irm|iex).
+  #>
+  param(
+    [Parameter(Mandatory = $true)][string] $Url,
+    [string] $ExpectedSha256 = "",
+    [string[]] $AllowedHosts = @(),
+    [string[]] $ArgumentList = @(),
+    [string] $WorkDir = ""
+  )
+  if (-not $WorkDir) {
+    $WorkDir = Join-Path $env:TEMP "local-llm-chat-scripts"
+  }
+  New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
+  $leaf = [Uri]::UnescapeDataString((Split-Path -Leaf ([Uri]$Url).AbsolutePath))
+  if (-not $leaf -or $leaf -notmatch '\.ps1$') {
+    $leaf = "remote-install.ps1"
+  }
+  $dest = Join-Path $WorkDir $leaf
+  Write-Host ("Downloading script: {0}" -f $Url)
+  Write-Host ("  -> {0}" -f $dest)
+  [void](Save-RemoteFile -Url $Url -Destination $dest -AllowedHosts $AllowedHosts -ExpectedSha256 $ExpectedSha256)
+  $argList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $dest) + $ArgumentList
+  Write-Host ("Running: powershell {0}" -f ($argList -join " "))
+  $p = Start-Process -FilePath "powershell.exe" -ArgumentList $argList -Wait -PassThru -NoNewWindow
+  return $p.ExitCode
+}
+
 # --- fnm / Node (prefer fnm; system npm only as fallback) ---
 
 function Add-FnmCommonPaths {
@@ -252,7 +446,8 @@ function Install-FnmIfMissing {
       return $false
     }
     $zip = Join-Path $env:TEMP "fnm-windows.zip"
-    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip -UseBasicParsing
+    [void](Save-RemoteFile -Url $asset.browser_download_url -Destination $zip `
+        -AllowedHosts @("github.com", "api.github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com", "github-releases.githubusercontent.com"))
     Expand-Archive -Path $zip -DestinationPath $fnmRoot -Force
     $exe = Get-ChildItem -Path $fnmRoot -Recurse -Filter "fnm.exe" | Select-Object -First 1
     if (-not $exe) {

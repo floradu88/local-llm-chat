@@ -473,7 +473,7 @@ models/ollama/  optional OLLAMA_MODELS root (gitignored)
 | [docs/powershell-admin-examples.md](docs/powershell-admin-examples.md) | Elevated / UAC PowerShell examples (GPU checks) |
 | [docs/powershell-ollama-setup.md](docs/powershell-ollama-setup.md) | Install Ollama, env vars, verify API |
 | [docs/trusted-sources.md](docs/trusted-sources.md) | Which hosts/orgs to trust |
-| [docs/infosec-swot.md](docs/infosec-swot.md) | Infosec analysis & SWOT (trust boundaries, hardening backlog) |
+| `config/installer-pins.example.json` | Optional SHA256 pins for Ollama/Cursor/VS Code installers (copy to `installer-pins.json`) |
 | [docs/install-models-from-web.md](docs/install-models-from-web.md) | Ollama Library, Hugging Face, ModelScope, Modelfile |
 | [docs/integrations.md](docs/integrations.md) | Continue, Cursor, Codegraph, Headroom |
 

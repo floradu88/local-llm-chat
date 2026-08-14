@@ -19,13 +19,17 @@
 
 .PARAMETER SkipLaunchKill
   Do not stop Cursor.exe if the installer auto-launches it.
+
+.PARAMETER ExpectedSha256
+  Optional SHA256 of the user-setup EXE. Also reads config/installer-pins.json (cursor-user-setup).
 #>
 [CmdletBinding()]
 param(
   [switch] $CheckOnly,
   [switch] $Force,
   [switch] $SkipWinget,
-  [switch] $SkipLaunchKill
+  [switch] $SkipLaunchKill,
+  [string] $ExpectedSha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -118,6 +122,7 @@ if (-not $SkipWinget) {
 if (-not $installed) {
   $api = "https://cursor.com/api/download?platform=win32-x64-user&releaseTrack=stable"
   Write-Host "  Resolving user installer from: $api"
+  Assert-UrlHostAllowlisted -Url $api -AllowedHosts @("cursor.com", "www.cursor.com")
   $meta = Invoke-RestMethod -Uri $api -TimeoutSec 60
   $downloadUrl = [string]$meta.downloadUrl
   $version = [string]$meta.version
@@ -127,18 +132,16 @@ if (-not $installed) {
   Write-Host ("  Version: {0}" -f $version)
   Write-Host ("  URL:     {0}" -f $downloadUrl)
 
+  if (-not $ExpectedSha256) {
+    $ExpectedSha256 = Get-InstallerPinSha256 -Id "cursor-user-setup"
+  }
+
   $dir = Join-Path $env:TEMP "local-llm-chat-cursor"
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
   $installer = Join-Path $dir ("CursorUserSetup-x64-{0}.exe" -f $version)
   Write-Host ("  Downloading to: {0}" -f $installer)
-  try {
-    Start-BitsTransfer -Source $downloadUrl -Destination $installer -ErrorAction Stop
-  } catch {
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $installer -UseBasicParsing
-  }
-  if (-not (Test-Path -LiteralPath $installer)) {
-    throw "Download missing: $installer"
-  }
+  [void](Save-RemoteFile -Url $downloadUrl -Destination $installer -ExpectedSha256 $ExpectedSha256 `
+      -AllowedHosts @("cursor.com", "www.cursor.com", "download.todesktop.com", "cdn.cursor.sh", "downloads.cursor.com"))
 
   $log = Join-Path $dir "cursor-user-setup.log"
   $args = @(
@@ -163,7 +166,6 @@ if (-not $installed) {
   }
 
   if ($p.ExitCode -ne 0 -and $p.ExitCode -ne $null) {
-    # Inno Setup often returns 0; non-zero is a real failure
     Write-Warning "Installer returned $($p.ExitCode)"
   }
 }
