@@ -48,6 +48,7 @@ Gated models (e.g. some Llama) need a Hugging Face account + license accept + to
 - Site: [modelscope.cn](https://modelscope.cn)
 - Use when Hugging Face is slow or blocked.
 - Script: `.\scripts\Download-FromUrl.ps1 -Url "<gguf-url>"` then `.\scripts\Import-GGUF.ps1`
+- Hosts must be HTTPS and allowlisted (ModelScope / GitHub / HF CDNs). Prefer `-ExpectedSha256 <hex>` when the model card publishes a checksum.
 - Cross-check the model card against the Hugging Face original (name, license, quant).
 
 ### 4. Upstream GitHub Releases

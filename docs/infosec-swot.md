@@ -188,8 +188,8 @@ flowchart TB
 ## 6. Recommended hardening backlog (priority)
 
 1. **P0 — Document operator threat model** (this file) and link from README — **done**.
-2. **P1 — Hash-verify installers**; stop raw `irm | iex` where practical — **done** (`Save-RemoteFile` / `Invoke-VerifiedRemoteScript`; `Install-Ollama.ps1` downloads then `-File`; Cursor/VS Code/fnm use allowlist + SHA print/optional pin via `config/installer-pins.example.json`).
-3. **P1 — Allowlist + checksum** on `Download-FromUrl.ps1` — pending.
+2. **P1 — Hash-verify installers**; stop raw `irm | iex` where practical — **done**.
+3. **P1 — Allowlist + checksum** on `Download-FromUrl.ps1` — **done** (HTTPS host allowlist + `-ExpectedSha256`).
 4. **P2 — Constrain `Invoke-Elevated.ps1`** to `scripts\*.ps1` under the repo root — pending.
 5. **P2 — Optional “air-gap” switch** on setup — pending.
 6. **P3 — Egress guidance** (firewall / proxy) for regulated environments — pending.
